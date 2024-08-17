@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Java17新特性 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Java17新特性"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Java17新特性</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.25</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <p>Java 17 将是继 Java 8 以来最重要的长期支持（LTS）版本，是 Java 社区八年努力的成果。Spring 6.x 和 Spring Boot 3.x 最低支持的就是 Java 17。</p>
+<h1><span id="增强的伪随机数生成器">增强的伪随机数生成器</span></h1><p>JDK 17 之前，我们可以借助 <code>Random</code>、<code>ThreadLocalRandom</code>和<code>SplittableRandom</code>来生成随机数。不过，这 3 个类都各有缺陷，且缺少常见的伪随机算法支持。</p>
+<p>Java 17 为伪随机数生成器 （pseudorandom number generator，PRNG，又称为确定性随机位生成器）增加了新的接口类型和实现，使得开发者更容易在应用程序中互换使用各种 PRNG 算法。</p>
+<blockquote>
+<p>PRNG 用来生成接近于绝对随机数序列的数字序列。一般来说，PRNG 会依赖于一个初始值，也称为种子，来生成对应的伪随机数序列。只要种子确定了，PRNG 所生成的随机数就是完全确定的，因此其生成的随机数序列并不是真正随机的。</p>
+</blockquote>
+<p>使用示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">RandomGeneratorFactory&lt;RandomGenerator&gt; l128X256MixRandom = RandomGeneratorFactory.of(<span class="string">&quot;L128X256MixRandom&quot;</span>);</span><br><span class="line"><span class="comment">// 使用时间戳作为随机数种子</span></span><br><span class="line"><span class="type">RandomGenerator</span> <span class="variable">randomGenerator</span> <span class="operator">=</span> l128X256MixRandom.create(System.currentTimeMillis());</span><br><span class="line"><span class="comment">// 生成随机数</span></span><br><span class="line">randomGenerator.nextInt(<span class="number">10</span>);</span><br></pre></td></tr></table></figure>
+
+<h1><span id="增加了switch的类型匹配">增加了Switch的类型匹配</span></h1><p>Java 16 引入了一个对于 instanceof 的模式匹配，Java 17 增加了Switch的类型匹配自动转换功能。</p>
+<p>对于每一个 case 语句，我们都可以使用类型模式匹配，如果 o 的类型是 Integer，那么它就可以匹配到case 为 Integer 的分支，并且可以用该分支上的新变量替代原变量。不仅如此，这次 switch 表达式还添加了对 null 的支持，这样我们就可以把 null 放到第一个分支来实现空检查了，非常方便。</p>
+<h1><span id="弃用-applet-api-以进行删除">弃用 Applet API 以进行删除</span></h1><p>Applet API 用于编写在 Web 浏览器端运行的 Java 小程序，很多年前就已经被淘汰了，已经没有理由使用了。</p>
+<h1><span id="删除实验性的-aot-和-jit-编译器">删除实验性的 AOT 和 JIT 编译器</span></h1><p>在 Java 9 引入了实验性的提前 (AOT) 编译器，在启动虚拟机之前将 Java 类编译为本机代码。</p>
+<p>Java 17，删除实验性的提前 (AOT) 和即时 (JIT) 编译器，因为该编译器自推出以来很少使用，维护它所需的工作量很大。保留实验性的 Java 级 JVM 编译器接口 (JVMCI)，以便开发人员可以继续使用外部构建的编译器版本进行 JIT 编译。</p>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/MySQL2/">MySQL2</a></li>
+                
+                
+                    <li>下一篇: <a href="/Redis2/">Redis2</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

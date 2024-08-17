@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Spring - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Spring"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Spring</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1什么是-spring-框架">1.什么是 Spring 框架?</span></h1><p>Spring 是一款开源的轻量级 Java 开发框架，旨在提高开发人员的开发效率以及系统的可维护性。</p>
+<p>我们一般说 Spring 框架指的都是 Spring Framework，它是很多模块的集合，使用这些模块可以很方便地协助我们进行开发，比如说 Spring 支持 IoC（Inversion of Control:控制反转） 和 AOP(Aspect-Oriented Programming:面向切面编程)、可以很方便地对数据库进行访问、可以很方便地集成第三方组件（电子邮件，任务，调度，缓存等等）、对单元测试支持比较好、支持 RESTful Java 应用程序的开发。</p>
+<h1><span id="2spring主要包含哪些模块">2.Spring主要包含哪些模块？</span></h1><p><strong>Core Container</strong></p>
+<p>Spring 框架的核心模块，也可以说是基础模块，主要提供 IoC 依赖注入功能的支持。Spring 其他所有的功能基本都需要依赖于该模块，我们从上面那张 Spring 各个模块的依赖关系图就可以看出来。</p>
+<ul>
+<li><strong>spring-core</strong>：Spring 框架基本的核心工具类。</li>
+<li><strong>spring-beans</strong>：提供对 bean 的创建、配置和管理等功能的支持。</li>
+<li><strong>spring-context</strong>：提供对国际化、事件传播、资源加载等功能的支持。</li>
+<li><strong>spring-expression</strong>：提供对表达式语言（Spring Expression Language） SpEL 的支持，只依赖于 core 模块，不依赖于其他模块，可以单独使用。</li>
+</ul>
+<p><strong>AOP</strong></p>
+<ul>
+<li><strong>spring-aspects</strong>：该模块为与 AspectJ 的集成提供支持。</li>
+<li><strong>spring-aop</strong>：提供了面向切面的编程实现。</li>
+<li><strong>spring-instrument</strong>：提供了为 JVM 添加代理（agent）的功能。 具体来讲，它为 Tomcat 提供了一个织入代理，能够为 Tomcat 传递类文 件，就像这些文件是被类加载器加载的一样。没有理解也没关系，这个模块的使用场景非常有限。</li>
+</ul>
+<p><strong>Data Access&#x2F;Integration（数据访问&#x2F;集成）</strong></p>
+<ul>
+<li><strong>spring-jdbc</strong>：提供了对数据库访问的抽象 JDBC。不同的数据库都有自己独立的 API 用于操作数据库，而 Java 程序只需要和 JDBC API 交互，这样就屏蔽了数据库的影响。</li>
+<li><strong>spring-tx</strong>：提供对事务的支持。</li>
+<li><strong>spring-orm</strong>：提供对 Hibernate、JPA、iBatis 等 ORM 框架的支持。</li>
+<li><strong>spring-oxm</strong>：提供一个抽象层支撑 OXM(Object-to-XML-Mapping)，例如：JAXB、Castor、XMLBeans、JiBX 和 XStream 等。</li>
+<li><strong>spring-jms</strong> : 消息服务。自 Spring Framework 4.1 以后，它还提供了对 spring-messaging 模块的继承。</li>
+</ul>
+<p><strong>Spring Web</strong></p>
+<ul>
+<li><strong>spring-web</strong>：对 Web 功能的实现提供一些最基础的支持。</li>
+<li><strong>spring-webmvc</strong>：提供对 Spring MVC 的实现。</li>
+<li><strong>spring-websocket</strong>：提供了对 WebSocket 的支持，WebSocket 可以让客户端和服务端进行双向通信。</li>
+<li><strong>spring-webflux</strong>：提供对 WebFlux 的支持。WebFlux 是 Spring Framework 5.0 中引入的新的响应式框架。与 Spring MVC 不同，它不需要 Servlet API，是完全异步。</li>
+</ul>
+<p><strong>Spring Test</strong></p>
+<p>Spring 团队提倡测试驱动开发（TDD）。有了控制反转 (IoC)的帮助，单元测试和集成测试变得更简单。</p>
+<p>Spring 的测试模块对 JUnit（单元测试框架）、TestNG（类似 JUnit）、Mockito（主要用来 Mock 对象）、PowerMock（解决 Mockito 的问题比如无法模拟 final, static， private 方法）等等常用的测试框架支持的都比较好。</p>
+<h1><span id="3说一说什么是-ioc什么是-di">3.说一说什么是 IoC？什么是 DI？</span></h1><p>所谓的<strong>IoC</strong>（控制反转，Inversion of Control），就是由容器来控制对象的生命周期和对象之间的关系。以前是我们想要什么就自己创建什么，现在是我们需要什么容器就帮我们送来什么。</p>
+<p>也就是说，控制对象生命周期的不再是引用它的对象，而是容器，这就叫<strong>控制反转</strong>。</p>
+<p>Spring 倡导所有的类创建都通过 Spring 容器来，不再是开发者去 new，去 赋空值null 销毁，这些创建和销毁的工作都交给 Spring 容器来。</p>
+<p><strong>说说什么是 DI？</strong></p>
+<p><strong>DI（依赖注入，Dependency Injection）</strong>：有人说 IoC 和 DI 是一回事，有人说 IoC 是思想，DI 是 IoC 的实现。他们之间没有一个明显的界限。</p>
+<p>打个比方，我现在想吃韭菜馅的饺子，这时候就有人用针管往我吃的饺子里注入韭菜鸡蛋馅。就好像 A 类需要 B 类，以前是 A 类自己 new 一个 B 类，现在是有人把 B 类注入到 A 类里。</p>
+<h1><span id="4能简单说一下-spring-ioc-的实现机制吗">4.能简单说一下 Spring IoC 的实现机制吗？</span></h1><p>Spring 的 IoC 本质就是一个大工厂，而一个工厂，至少需要最基本三个条件：</p>
+<ul>
+<li><strong>生产产品</strong>：一个工厂最核心的功能就是生产产品。在 Spring 里，不用 Bean 自己来实例化，而是交给 Spring而实现的方式就是<strong>反射</strong>。而生产管理的模式就是——<strong>工厂模式</strong>。</li>
+<li><strong>库存产品</strong>：工厂一般都是有库房的，用来库存产品，毕竟生产的产品不能立马就拉走。Spring 本身就是一个容器，这个容器里存的就是对象，Spring会提前创建对象，再把创建出的对象存起来。</li>
+<li><strong>订单处理</strong>：还有最重要的一点，工厂根据什么来提供产品呢？订单。在 Spring 里，也有这样的订单，它就是我们 bean 的定义和依赖关系，可以是 xml 形式，也可以是我们最熟悉的注解形式。</li>
+</ul>
+<h1><span id="5什么是-aop">5.什么是 AOP？</span></h1><p>AOP，也就是 Aspect-oriented Programming，译为面向切面编程，是 Spring 中最重要的核心概念之一。</p>
+<p>简单点说，AOP 就是把一些业务逻辑中的相同代码抽取到一个独立的模块中，让业务逻辑更加清爽。</p>
+<p>举个例子，假如我们现在需要在业务代码开始前进行参数校验，在结束后打印日志，该怎么办呢？</p>
+<p>我们可以把<code>日志记录</code>和<code>数据校验</code>这两个功能抽取出来，形成一个切面，然后在业务代码中引入这个切面，这样就可以实现业务逻辑和通用逻辑的分离。</p>
+<p>业务代码不再关心这些通用逻辑，只需要关心自己的业务实现，这样就实现了业务逻辑和通用逻辑的分离。</p>
+<p><strong>AOP 有哪些核心概念？</strong></p>
+<ul>
+<li><strong>切面</strong>（Aspect）：类是对物体特征的抽象，切面就是对横切关注点的抽象</li>
+<li><strong>连接点</strong>（Join Point）：被拦截到的点，因为 Spring 只支持方法类型的连接点，所以在 Spring 中，连接点指的是被拦截到的方法，实际上连接点还可以是字段或者构造方法</li>
+<li><strong>切点</strong>（Pointcut）：对连接点进行拦截的定位</li>
+<li><strong>通知</strong>（Advice）：指拦截到连接点之后要执行的代码，也可以称作<strong>增强</strong></li>
+<li><strong>目标对象</strong> （Target）：代理的目标对象</li>
+<li><strong>引介</strong>（introduction）：一种特殊的增强，可以动态地为类添加一些属性和方法</li>
+<li><strong>织入</strong>（Weabing）：织入是将增强添加到目标类的具体连接点上的过程。</li>
+</ul>
+<p><strong>Aop的五种通知类型：</strong></p>
+<p>AOP 一般有 <strong>5 种</strong>环绕方式：</p>
+<ul>
+<li>前置通知 (@Before)</li>
+<li>返回通知 (@AfterReturning)</li>
+<li>异常通知 (@AfterThrowing)</li>
+<li>后置通知 (@After)</li>
+<li>环绕通知 (@Around)</li>
+</ul>
+<h1><span id="5spring-事务的种类">5.Spring 事务的种类？</span></h1><p>Spring 事务的本质其实就是数据库对事务的支持，没有数据库的事务支持，Spring 是无法提供事务功能的。Spring 只提供统一事务管理接口，具体实现都是由各数据库自己实现，数据库事务的提交和回滚是通过数据库自己的事务机制实现。</p>
+<p>在 Spring 中，事务管理可以分为两大类：声明式事务管理和编程式事务管理。</p>
+<p><strong>编程式事务</strong>：在代码中硬编码(在分布式系统中推荐使用) : 通过 <code>TransactionTemplate</code>或者 <code>TransactionManager</code> 手动管理事务。</p>
+<p><strong>声明式事务</strong>：在 XML 配置文件中配置或者直接基于注解（单体应用或者简单业务系统推荐使用） : 实际是通过 AOP 实现（基于<code>@Transactional</code> 的全注解方式使用最多</p>
+<p> <strong>两者的区别</strong></p>
+<ul>
+<li><strong>编程式事务管理</strong>：需要在代码中显式调用事务管理的 API 来控制事务的边界，比较灵活，但是代码侵入性较强，不够优雅。</li>
+<li><strong>声明式事务管理</strong>：这种方式使用 Spring 的 AOP 来声明事务，将事务管理代码从业务代码中分离出来。优点是代码简洁，易于维护。但缺点是不够灵活，只能在预定义的方法上使用事务。</li>
+</ul>
+<h1><span id="6spring-的事务传播机制">6.Spring 的事务传播机制</span></h1><p>事务的传播机制定义了在方法被另一个事务方法调用时，这个方法的事务行为应该如何。</p>
+<p>Spring 提供了一系列事务传播行为，这些传播行为定义了事务的边界和事务上下文如何在方法调用链中传播。</p>
+<ul>
+<li>required：如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务。Spring 的默认传播行为。</li>
+<li>supports：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行。</li>
+<li>mandatory：如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。</li>
+<li>requires_new：总是启动一个新的事务，如果当前存在事务，则将当前事务挂起。</li>
+<li>not_supported：总是以非事务方式执行，如果当前存在事务，则将当前事务挂起。</li>
+<li>nested：如果当前存在事务，则在嵌套事务内执行。如果当前事务不存在，则行为与 REQUIRED 一样。嵌套事务是一个子事务，它依赖于父事务。父事务失败时，会回滚子事务所做的所有操作。但子事务异常不一定会导致父事务的回滚。</li>
+</ul>
+<h1><span id="7声明式事务在哪些情况下会失效">7.声明式事务在哪些情况下会失效？</span></h1><p><strong>@Transactional 应用在非 public 修饰的方法上</strong></p>
+<p>如果 Transactional 注解应用在非 public 修饰的方法上，Transactional 将会失效。</p>
+<p><strong>@Transactional 注解属性 propagation 设置错误</strong></p>
+<ul>
+<li>supports：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行；错误使用场景：在业务逻辑必须运行在事务环境下以确保数据一致性的情况下使用 SUPPORTS。</li>
+<li>not_supported：总是以非事务方式执行，如果当前存在事务，则挂起该事务。错误使用场景：在需要事务支持的操作中使用 NOT_SUPPORTED。</li>
+<li>never：总是以非事务方式执行，如果当前存在事务，则抛出异常。错误使用场景：在应该在事务环境下执行的操作中使用 NEVER。</li>
+</ul>
+<p><strong>@Transactional 注解属性 rollbackFor 设置错误</strong></p>
+<p>rollbackFor 用来指定能够触发事务回滚的异常类型。Spring 默认抛出未检查 unchecked 异常（继承自 RuntimeException 的异常）或者 Error 才回滚事务，其他异常不会触发回滚事务。</p>
+<p><strong>同一个类中方法调用，导致@Transactional 失效</strong></p>
+<p>这种情况是最常见的一种@Transactional 注解失效场景。</p>
+<p>开发中避免不了会对同一个类里面的方法调用，比如有一个类 Test，它的一个方法 A，A 调用本类的方法 B（不论方法 B 是用 public 还是 private 修饰），但方法 A 没有声明注解事务，而 B 方法有。则外部调用方法 A 之后，方法 B 的事务是不会起作用的。这也是经常犯错误的一个地方。</p>
+<h1><span id="8spring-mvc-的核心组件">8.Spring MVC 的核心组件？</span></h1><ol>
+<li><strong>DispatcherServlet</strong>：前置控制器，是整个流程控制的<strong>核心</strong>，控制其他组件的执行，进行统一调度，降低组件之间的耦合性，相当于总指挥。</li>
+<li><strong>Handler</strong>：处理器，完成具体的业务逻辑，相当于 Servlet 或 Action。</li>
+<li><strong>HandlerMapping</strong>：DispatcherServlet 接收到请求之后，通过 HandlerMapping 将不同的请求映射到不同的 Handler。</li>
+<li><strong>HandlerInterceptor</strong>：处理器拦截器，是一个接口，如果需要完成一些拦截处理，可以实现该接口。</li>
+<li><strong>HandlerExecutionChain</strong>：处理器执行链，包括两部分内容：Handler 和 HandlerInterceptor（系统会有一个默认的 HandlerInterceptor，如果需要额外设置拦截，可以添加拦截器）。</li>
+<li><strong>HandlerAdapter</strong>：处理器适配器，Handler 执行业务方法之前，需要进行一系列的操作，包括表单数据的验证、数据类型的转换、将表单数据封装到 JavaBean 等，这些操作都是由 HandlerApater 来完成，开发者只需将注意力集中业务逻辑的处理上，DispatcherServlet 通过 HandlerAdapter 执行不同的 Handler。</li>
+<li><strong>ModelAndView</strong>：装载了模型数据和视图信息，作为 Handler 的处理结果，返回给 DispatcherServlet。</li>
+<li><strong>ViewResolver</strong>：视图解析器，DispatcheServlet 通过它将逻辑视图解析为物理视图，最终将渲染结果响应给客户端。</li>
+</ol>
+<h1><span id="9springboot-自动配置原理了解吗">9.SpringBoot 自动配置原理了解吗？</span></h1><p><strong>核心流程总结：</strong></p>
+<p>1、导入<code>starter</code>，就会导入<code>autoconfigure</code>包。</p>
+<p>2、<code>autoconfigure</code> 包里面 有一个文件 <code>METAINF/spring/**org.springframework.boot.autoconfigure.AutoConfiguration**.imports</code>,里面指定的所有启动要加载的自动配置类</p>
+<p>3、@EnableAutoConfiguration 会自动的把上面文件里面写的所有<strong>自动配置类都导入进来。xxxAutoConfiguration 是有条件注解进行按需加载</strong></p>
+<p>4、<code>xxxAutoConfiguration</code>给容器中导入一堆组件，组件都是从 <code>xxxProperties</code>中提取属性值</p>
+<p>5、<code>xxxProperties</code>又是和<strong>配置文件</strong>进行了绑定</p>
+<p><strong>效果：</strong>导入<code>starter</code>、修改配置文件，就能修改底层行为。</p>
+<h1><span id="10spring-boot中常用注解">10.Spring Boot中常用注解</span></h1><p><strong>1、@SpringBootApplication</strong></p>
+<p>这个注解是Spring Boot最核心的注解，用在 Spring Boot的主类上，标识这是一个 Spring Boot 应用，用来开启 Spring Boot 的各项能力。实际上这个注解是@Configuration,@EnableAutoConfiguration,@ComponentScan三个注解的组合。由于这些注解一般都是一起使用，所以Spring Boot提供了一个统一的注解@SpringBootApplication。</p>
+<p><strong>2、@EnableAutoConfiguration</strong></p>
+<p>允许 Spring Boot 自动配置注解，开启这个注解之后，Spring Boot 就能根据当前类路径下的包或者类来配置 Spring Bean。</p>
+<p><strong>3、@Configuration</strong></p>
+<p>用于定义配置类，指出该类是 Bean 配置的信息源，相当于传统的xml配置文件，一般加在主类上</p>
+<p><strong>4、@ComponentScan</strong></p>
+<p>组件扫描。让spring Boot扫描到Configuration类并把它加入到程序上下文。</p>
+<p>@ComponentScan注解默认就会装配标识了**@Controller，@Service，@Repository，@Component**注解的类到spring容器中。</p>
+<p><strong>5、@Repository</strong></p>
+<p>用于标注数据访问组件，即DAO组件。</p>
+<p><strong>6、@Service</strong></p>
+<p>一般用于修饰service层的组件。</p>
+<p><strong>7、@RestController</strong></p>
+<p>用于标注控制层组件。</p>
+<p><strong>8、@ResponseBody</strong></p>
+<p>表示该方法的返回结果直接写入HTTP response body中，而不走视图解析器。</p>
+<p><strong>9、@Component</strong></p>
+<p>泛指组件，当组件不好归类的时候，我们可以使用这个注解进行标注。</p>
+<p><strong>10、@Bean</strong></p>
+<p>产生一个bean,并交给spring管理。</p>
+<p><strong>11、@AutoWired</strong></p>
+<p>用于 bean 的注入。默认的注入方式为<code>byType</code></p>
+<p><strong>12、@Qualifier</strong></p>
+<p>当有多个同一类型的Bean时，可以用@Qualifier(“name”)来指定。与@Autowired配合使用</p>
+<p><strong>13、@Resource(name&#x3D;”name”,type&#x3D;”type”)</strong></p>
+<p>没有括号内内容的话，默认byName。与@Autowired作用类似。</p>
+<p><strong>14、@RequestMapping</strong></p>
+<p>RequestMapping是一个用来处理请求地址映射的注解；提供路由信息，负责URL到Controller中的具体函数的映射，可用于类或方法上。用于类上，表示类中的所有响应请求的方法都是以该地址作为父路径。</p>
+<p><strong>15、@RequestParam</strong></p>
+<p>用在方法的参数前面。</p>
+<p><strong>16、@PathVariable</strong></p>
+<p>指定路径变量。</p>
+<p><strong>17、@ConfigurationProperties</strong></p>
+<p>将自定义的properties文件映射到实体bean中。</p>
+<h1><span id="11spring常见注解">11.Spring常见注解</span></h1><p><strong>1、声明bean的注解</strong></p>
+<p>@Component 组件，没有明确的角色</p>
+<p>@Service 在业务逻辑层使用（service层）</p>
+<p>@Repository 在数据访问层使用（dao层）</p>
+<p>@Controller 在展现层使用，控制器的声明（C）</p>
+<p><strong>2、注入bean的注解</strong></p>
+<p>@Autowired：由Spring提供</p>
+<p>@Resource：由JSR-250提供</p>
+<p><strong>3、java配置类相关注解</strong></p>
+<p>@Configuration 声明当前类为配置类，相当于xml形式的Spring配置（类上）</p>
+<p>@Bean 注解在方法上，声明当前方法的返回值为一个bean，替代xml中的方式（方法上）</p>
+<p>@Configuration 声明当前类为配置类，其中内部组合了@Component注解，表明这个类是一个bean（类上）</p>
+<p>@ComponentScan 用于对Component进行扫描，相当于xml中的（类上）</p>
+<p><strong>4、切面（AOP）相关注解</strong></p>
+<p>@Aspect 声明一个切面（类上） 使用@After、@Before、@Around定义advice，可直接将拦截规则（切点）作为参数。</p>
+<p>@After 在方法执行之后执行（方法上） @Before 在方法执行之前执行（方法上） @Around 在方法执行之前与之后执行（方法上）</p>
+<p>@PointCut 声明切点 在java配置类中使用</p>
+<p>@EnableAspectJAutoProxy注解开启Spring对AspectJ代理的支持</p>
+<p><strong>5、@Bean的属性支持</strong></p>
+<p>@Scope 设置Spring容器如何新建Bean实例</p>
+<p><strong>6、@Value注解</strong></p>
+<p>@Value 为属性注入值</p>
+<p>② @PropertySource 加载配置文件</p>
+<p><strong>7、环境切换</strong></p>
+<p>@Profile</p>
+<p>8<strong>、定时任务相关</strong></p>
+<p>@EnableScheduling 在配置类上使用，开启计划任务的支持（</p>
+<p>@Scheduled 来申明这是一个任务</p>
+<p><strong>10、@Enable*注解说明</strong></p>
+<p>这些注解主要用来开启对xxx的支持。 @EnableAspectJAutoProxy 开启对AspectJ自动代理的支持</p>
+<p>@EnableAsync 开启异步方法的支持</p>
+<p>@EnableScheduling 开启计划任务的支持</p>
+<p>@EnableWebMvc 开启Web MVC的配置支持</p>
+<p>@EnableConfigurationProperties 开启对@ConfigurationProperties注解配置Bean的支持</p>
+<p>@EnableJpaRepositories 开启对SpringData JPA Repository的支持</p>
+<p>@EnableTransactionManagement 开启注解式事务的支持</p>
+<p>@EnableTransactionManagement 开启注解式事务的支持</p>
+<p>@EnableCaching 开启注解式的缓存支持</p>
+<h1><span id="12springmvc常用注解">12.SpringMVC常用注解</span></h1><p>@EnableWebMvc 在配置类中开启Web MVC的配置支持</p>
+<p>@Controller 声明该类为SpringMVC中的Controller</p>
+<p>@RequestMapping 用于映射Web请求，包括访问路径和参数</p>
+<ul>
+<li>@GetMapping </li>
+<li>@PostMapping</li>
+<li>@DeleteMapping</li>
+<li>@PutMapping</li>
+</ul>
+<p>@ResponseBody 支持将返回值放在response内，而不是一个页面，通常用户返回json数据</p>
+<p>@RequestBody 允许request的参数在request体中，而不是在直接连接在地址后面。</p>
+<p>@PathVariable 用于接收路径参数</p>
+<p>@RestController 该注解为一个组合注解，相当于@Controller和@ResponseBody的组合</p>
+<p>@ExceptionHandler 用于全局处理控制器里的异常</p>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/Java%E9%9B%86%E5%90%88/">Java集合</a></li>
+                
+                
+                    <li>下一篇: <a href="/Redis1/">Redis1</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

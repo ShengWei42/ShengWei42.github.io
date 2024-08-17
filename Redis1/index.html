@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Redis1 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Redis1"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Redis1</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1什么是-redis">1.什么是 Redis？</span></h1><p>Redis （<strong>RE</strong>mote <strong>DI</strong>ctionary <strong>S</strong>erver）是一个基于 C 语言开发的开源 NoSQL 数据库。与传统数据库不同的是，Redis 的数据是保存在内存中的（内存数据库，支持持久化），因此读写速度非常快，被广泛应用于分布式缓存方向。并且，Redis 存储的是 KV 键值对数据。</p>
+<p>为了满足不同的业务场景，Redis 内置了多种数据类型实现。并且，Redis 还支持事务、持久化、Lua 脚本、发布订阅模型、多种开箱即用的集群方案。</p>
+<h1><span id="2redis-为什么这么快">2.Redis 为什么这么快？</span></h1><p>Redis 之所以能够如此快速高效地处理数据，主要有以下几个原因：</p>
+<ol>
+<li><p>基于内存存储<br>Redis 将数据存储在内存中，避免了磁盘 I&#x2F;O 的性能开销。内存的读写速度远远高于磁盘，这是 Redis 能够快速响应的根本原因。</p>
+</li>
+<li><p>高效的数据结构<br>Redis 为不同的数据类型设计了专门的数据结构，如 String、List、Hash、Set、Sorted Set 等。这些数据结构经过精心设计，可以高效地支持各种操作。</p>
+</li>
+<li><p>单线程模型<br>Redis 采用单线程模型运行，避免了多线程环境下的上下文切换和锁竞争开销。单线程意味着 Redis 同一时刻只会执行一个命令，不会出现并发问题。虽然单线程理论上存在性能瓶颈，但在实际应用中 CPU 通常不是 Redis 的瓶颈所在。</p>
+</li>
+<li><p>多路 I&#x2F;O 复用<br>Redis 利用 epoll 等 I&#x2F;O 多路复用技术，可以同时监听多个 Socket 连接。当有事件到达时，采用事件处理器进行非阻塞处理。这种高效的 I&#x2F;O 模型可以处理大量并发连接。</p>
+</li>
+</ol>
+<h1><span id="3为什么要用-redis">3.为什么要用 Redis？</span></h1><p><strong>1、访问速度更快</strong></p>
+<p>传统数据库数据保存在磁盘，而 Redis 基于内存，内存的访问速度比磁盘快很多。引入 Redis 之后，我们可以把一些高频访问的数据放到 Redis 中，这样下次就可以直接从内存中读取，速度可以提升几十倍甚至上百倍。</p>
+<p><strong>2、高并发</strong></p>
+<p>一般像 MySQL 这类的数据库的 QPS 大概都在 4k 左右（4 核 8g） ，但是使用 Redis 缓存之后很容易达到 5w+，甚至能达到 10w+（就单机 Redis 的情况，Redis 集群的话会更高）。</p>
+<blockquote>
+<p>QPS（Query Per Second）：服务器每秒可以执行的查询次数；</p>
+</blockquote>
+<p>由此可见，直接操作缓存能够承受的数据库请求数量是远远大于直接访问数据库的，所以我们可以考虑把数据库中的部分数据转移到缓存中去，这样用户的一部分请求会直接到缓存这里而不用经过数据库。进而，我们也就提高了系统整体的并发。</p>
+<p><strong>3、功能全面</strong></p>
+<p>Redis 除了可以用作缓存之外，还可以用于分布式锁、限流、消息队列、延时队列等场景，功能强大！</p>
+<h1><span id="4说说-redis-常用命令">4.说说 Redis 常用命令</span></h1><ol>
+<li><p>通用命令</p>
+<ul>
+<li><code>keys *</code>: 查看当前数据库中所有的键</li>
+<li><code>exists key</code>: 检查指定的键是否存在</li>
+<li><code>del key [key ...]</code>: 删除一个或多个键</li>
+<li><code>expire key seconds</code>: 为键设置过期时间</li>
+<li><code>ttl key</code>: 查看键的剩余过期时间</li>
+<li><code>type key</code>: 查看键的数据类型</li>
+</ul>
+</li>
+<li><p>操作字符串的命令有：</p>
+<ul>
+<li><code>SET key value</code>：设置键 key 的值为 value。</li>
+<li><code>GET key</code>：获取键 key 的值。</li>
+<li><code>DEL key</code>：删除键 key。</li>
+<li><code>INCR key</code>：将键 key 存储的数值增一。</li>
+<li><code>DECR key</code>：将键 key 存储的数值减一。</li>
+</ul>
+</li>
+<li><p>操作列表的命令有：</p>
+<ul>
+<li><code>LPUSH key value</code>：将一个值插入到列表 key 的头部。</li>
+<li><code>RPUSH key value</code>：将一个值插入到列表 key 的尾部。</li>
+<li><code>LPOP key</code>：移除并返回列表 key 的头元素。</li>
+<li><code>RPOP key</code>：移除并返回列表 key 的尾元素。</li>
+<li><code>LRANGE key start end</code>：获取列表 key 中指定范围内的元素。</li>
+</ul>
+</li>
+<li><p>操作集合的命令有：</p>
+<ul>
+<li><code>SADD key member</code>：向集合 key 添加一个元素。</li>
+<li><code>SREM key member</code>：从集合 key 中移除一个元素。</li>
+<li><code>SMEMBERS key</code>：返回集合 key 中的所有元素。</li>
+</ul>
+</li>
+<li><p>操作有序集合的命令有：</p>
+<ul>
+<li><code>ZADD key score member</code>：向有序集合 key 添加一个成员，或更新其分数。</li>
+<li><code>ZRANGE key start end [WITHSCORES]</code>：按照索引区间返回有序集合 key 中的成员，可选 WITHSCORES 参数返回分数。</li>
+<li><code>ZREVRANGE key start end [WITHSCORES]</code>：返回有序集合 key 中，指定区间内的成员，按分数递减。</li>
+<li><code>ZREM key member</code>：移除有序集合 key 中的一个或多个成员。</li>
+</ul>
+</li>
+<li><p>操作哈希的命令有：</p>
+<ul>
+<li><code>HSET key field value</code>：向键为 key 的哈希表中设置字段 field 的值为 value。</li>
+<li><code>HGET key field</code>：获取键为 key 的哈希表中字段 field 的值。</li>
+<li><code>HGETALL key</code>：获取键为 key 的哈希表中所有的字段和值。</li>
+<li><code>HDEL key field</code>：删除键为 key 的哈希表中的一个或多个字段。</li>
+</ul>
+</li>
+</ol>
+<h1><span id="5能说说布隆过滤器吗">5.能说说布隆过滤器吗？</span></h1><p>布隆过滤器是一种空间效率极高的概率型数据结构，用于快速检查一个元素是否存在于一个集合中。</p>
+<p>布隆过滤器由一个长度为 m 的位数组和 k 个哈希函数组成。</p>
+<ul>
+<li>开始时，布隆过滤器的每个位都被设置为 0。</li>
+<li>当一个元素被添加到过滤器中时，它会被 k 个哈希函数分别计算得到 k 个位置，然后将位数组中对应的位设置为 1。</li>
+<li>当检查一个元素是否存在于过滤器中时，同样使用 k 个哈希函数计算位置，如果任一位置的位为 0，则该元素肯定不在过滤器中；如果所有位置的位都为 1，则该元素可能在过滤器中。</li>
+</ul>
+<p>因为布隆过滤器占用的内存空间非常小，所以查询效率也非常高，所以在 Redis 缓存中，使用布隆过滤器可以快速判断请求的数据是否在缓存中。但是布隆过滤器也有一定的缺点，由于哈希冲突的存在，布隆过滤器可能会出现“假阳性”，即错误地报告某个元素存在，但不会出现“假阴性”，即如果报告某个元素不存在，它一定不在集合中。</p>
+<h1><span id="6redis-是单线程吗">6.Redis 是单线程吗？</span></h1><p>Redis 单线程指的是 <strong>接收客户端请求-&gt;解析请求 -&gt;进行数据读写等操作-&gt;发送数据给客户端</strong> 这个过程是由一个线程（主线程）来完成的，这也是我们常说 Redis 是单线程的原因。但是，Redis 程序并不是单线程的，Redis 在启动的时候，是会启动后台线程。比如关闭文件、AOF 刷盘、释放内存。</p>
+<h1><span id="7redis-60-之后为什么引入了多线程">7.Redis 6.0 之后为什么引入了多线程？</span></h1><p>虽然 Redis 的主要工作（网络 I&#x2F;O 和执行命令）一直是单线程模型，但是在 Redis 6.0 版本之后，也采用了多个 I&#x2F;O 线程来处理网络请求，这是因为随着网络硬件的性能提升，Redis 的性能瓶颈有时会出现在网络 I&#x2F;O 的处理上。所以为了提高网络 I&#x2F;O 的并行度，Redis 6.0 对于网络 I&#x2F;O 采用多线程来处理。但是对于命令的执行，Redis 仍然使用单线程来处理。命令单线程执行确保了数据操作的原子性和一致性。</p>
+<h1><span id="8redis-持久化方式有哪些有什么区别">8.Redis 持久化方式有哪些？有什么区别？</span></h1><ol>
+<li><p>RDB持久化</p>
+<ul>
+<li>RDB（Redis DataBase）持久化是一种基于快照的持久化方式。在指定的时间间隔内，如果满足一定条件（如某段时间内发生的写操作次数），Redis会生成一个包含当前内存数据的RDB文件。这个RDB文件可以用于数据恢复或备份。RDB持久化提供了较高的数据压缩率和快速的数据加载速度，但可能存在一定程度的数据丢失。</li>
+<li>触发方式：<ul>
+<li>手动触发：使用**<code>SAVE</code><strong>或</strong><code>BGSAVE</code><strong>命令。</strong><code>SAVE</code><strong>是同步命令，执行过程中会阻塞其他请求。</strong><code>BGSAVE</code>**是异步命令，主进程会forks一个子进程，进行异步持久化，持久化过程中主进程仍然可以处理其他请求。</li>
+<li>自动触发：在配置文件中设置触发条件，redis.conf配置如下：<code>save 300 10</code>，300s内至少有1次写操作。</li>
+<li>关闭Redis时触发：Redis在关闭服务时会自动触发一次RDB持久化。</li>
+<li>主从同步时触发：当从节点连接到主节点时，主节点会触发一次RDB持久化，并将生成的RDB文件发送给从节点进行同步。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>AOF持久化</p>
+<ul>
+<li>AOF（Append Only File）持久化是一种基于日志的持久化方式。Redis将所有的写操作命令记录到一个AOF文件中。当Redis重新启动时，可以通过重放AOF文件中的命令来恢复数据。AOF持久化提供了更高的数据安全性，可以保证数据的完整性。然而，与RDB持久化相比，AOF文件通常较大，数据加载速度较慢。</li>
+<li>触发方式：<ul>
+<li>启用AOF持久化：在配置文件中设置<code>appendonly yes</code>。</li>
+<li>还可以配置AOF文件的写入策略。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>混合持久化（RDB + AOF）<br>混合持久化结合了RDB持久化和AOF持久化的优点，可以在保证数据安全性的同时，提供较快的数据加载速度。在这种持久化方式下，Redis会同时生成RDB文件和AOF文件。当Redis重新启动时，优先使用AOF文件恢复数据，以确保数据的完整性。混合持久化适用于对数据安全性和性能要求较高的场景。</p>
+</li>
+</ol>
+<h1><span id="9rdb-和-aof-各自有什么优缺点">9.RDB 和 AOF 各自有什么优缺点？</span></h1><p><strong>RDB持久化具有以下优点：</strong></p>
+<ol>
+<li>高性能：由于采用子进程进行磁盘操作，主进程无需进行磁盘IO，保证了Redis的高性能。</li>
+<li>快速恢复：RDB文件包含了某一时刻的完整数据快照，可以快速恢复数据。</li>
+<li>更小的存储空间：RDB文件经过压缩，占用较小的磁盘空间。</li>
+</ol>
+<p><strong>RDB持久化的缺点包括：</strong></p>
+<ol>
+<li>数据丢失：由于RDB持久化是基于时间间隔的，可能存在一定程度的数据丢失。</li>
+<li>子进程占用内存：在生成RDB文件过程中，子进程会占用和主进程相同的内存空间，可能导致内存不足的问题。</li>
+</ol>
+<p><strong>AOF持久化具有以下优点：</strong></p>
+<ol>
+<li>更高的数据安全性：根据同步策略的选择，AOF持久化可以保证较高的数据安全性。</li>
+<li>更好的容错性：即使AOF文件存在部分损坏，仍可以恢复大部分数据。</li>
+</ol>
+<p><strong>AOF持久化的缺点包括：</strong></p>
+<ol>
+<li>较大的存储空间：与RDB持久化相比，AOF文件通常较大，占用较多磁盘空间。</li>
+<li>数据加载速度较慢：由于需要重放AOF文件中的命令，数据恢复速度相对较慢。</li>
+</ol>
+<h1><span id="10rdb-和-aof-如何选择">10.RDB 和 AOF 如何选择？</span></h1><p>如果对数据的安全性要求较高，不能接受数据丢失，建议使用AOF或者混合持久化。<br>如果更注重系统的高性能要求或者磁盘空间有限，数据不太敏感，可以选择RDB。<br>在大多数场景下，一般是使用混合持久化方式，它结合了二者的优点，更适合复杂的应用场景。</p>
+<h1><span id="11redis-如何实现服务高可用">11.Redis 如何实现服务高可用？</span></h1><ol>
+<li><p>主从复制</p>
+<ul>
+<li>一个 Redis 实例作为主节点（Master），负责处理所有的写操作。</li>
+<li>一个或多个 Redis 实例作为从节点（Slave），复制主节点的数据。</li>
+<li>从节点可以用于读取操作，实现读写分离，提高系统性能。</li>
+<li>当主节点发生故障时，可以手动或自动切换到从节点，提供服务。</li>
+</ul>
+</li>
+<li><p>哨兵模式</p>
+<ul>
+<li>在主从复制的基础上，引入了哨兵节点。</li>
+<li>哨兵节点用于监控主从节点的状态，自动执行故障转移。</li>
+<li>当主节点发生故障时，哨兵节点会自动将一个从节点升级为新的主节点。</li>
+<li>哨兵模式实现了自动故障转移，提高了系统的可用性。</li>
+</ul>
+</li>
+<li><p>分片集群模式</p>
+<ul>
+<li>Redis 集群支持多主多从，每个主节点都有一个或多个从节点。</li>
+<li>集群将数据分为16384个槽位，每个节点负责管理一部分槽位。当客户端向集群发送请求时，集群会根据键的哈希值将请求路由到相应的节点。</li>
+<li>客户端直接与存储数据的主节点交互，一定程度上实现了实现负载均衡。</li>
+<li>当某个节点发生故障时，集群会自动进行故障转移，保证服务可用性。</li>
+<li>集群模式支持线性扩展，可以通过添加节点来提高容量和吞吐量。</li>
+</ul>
+</li>
+</ol>
+<p>通过主从复制、哨兵模式和集群模式，Redis 可以在主节点故障或其他异常情况下保持高可用性，确保数据的可靠性和可用性。不同的模式适用于不同的应用场景，可以根据具体需求进行选择。</p>
+<h1><span id="12主从复制了解吗">12.主从复制了解吗？</span></h1><p>主从复制是指将一台 Redis 服务器的数据，复制到其他的 Redis 服务器。前者称为主节点，后者称为从节点。且数据的复制是单向的，只能由主节点到从节点。</p>
+<p><strong>主从复制主要的作用是什么？</strong></p>
+<p>① <strong>数据冗余：</strong> 主从复制实现了数据的热备份，是持久化之外的一种数据冗余方式。</p>
+<p>② <strong>故障恢复：</strong> 如果主节点挂掉了，可以将一个从节点提升为主节点，从而实现故障的快速恢复。通常会使用哨兵来实现自动故障转移，当主节点挂掉时，哨兵会自动将一个从节点升级为主节点，保证系统的可用性。假如是从节点挂掉了，主节点不受影响，但应该尽快修复并重启挂掉的从节点，使其重新加入集群并从主节点同步数据。</p>
+<p>③ <strong>负载均衡：</strong> 在主从复制的基础上，配合读写分离，可以由主节点提供写服务，由从节点提供读服务，分担服务器负载。尤其是在写少读多的场景下，通过多个从节点分担读负载，可以大大提高 Redis 服务器的并发量。</p>
+<p>④ <strong>高可用基础：</strong> 除了上述作用以外，主从复制还是哨兵和集群能够实施的基础，因此说主从复制是 Redis 高可用的基础。</p>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/Spring/">Spring</a></li>
+                
+                
+                    <li>下一篇: <a href="/Linux/">Linux</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

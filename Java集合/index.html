@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Java集合 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Java集合"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Java集合</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1说说有哪些常见的集合框架">1.说说有哪些常见的集合框架？</span></h1><p>Java 集合框架可以分为两条大的支线：</p>
+<p>①、Collection，主要由 List、Set、Queue 组成：</p>
+<ul>
+<li>List 代表有序、可重复的集合，典型代表就是封装了动态数组的 ArrayList和封装了链表的 LinkedList</li>
+<li>Set 代表无序、不可重复的集合，典型代表就是 HashSet 和 TreeSet</li>
+<li>Queue 代表队列，典型代表就是双端队列 ArrayDeque，以及优先级队列 PriorityQueue</li>
+</ul>
+<p>②、Map，代表键值对的集合，典型代表就是 HashMap</p>
+<h2><span id="list">List</span></h2><ul>
+<li><code>ArrayList</code>：<code>Object[]</code> 数组。</li>
+<li><code>Vector</code>：<code>Object[]</code> 数组。</li>
+<li><code>LinkedList</code>：双向链表(JDK1.6 之前为循环链表，JDK1.7 取消了循环)。</li>
+</ul>
+<h2><span id="set">Set</span></h2><ul>
+<li><code>HashSet</code>(无序，唯一): 基于 <code>HashMap</code> 实现的，底层采用 <code>HashMap</code> 来保存元素。</li>
+<li><code>LinkedHashSet</code>: <code>LinkedHashSet</code> 是 <code>HashSet</code> 的子类，并且其内部是通过 <code>LinkedHashMap</code> 来实现的。</li>
+<li><code>TreeSet</code>(有序，唯一): 红黑树(自平衡的排序二叉树)。</li>
+</ul>
+<h2><span id="queue">Queue</span></h2><ul>
+<li><code>PriorityQueue</code>: <code>Object[]</code> 数组来实现小顶堆。</li>
+<li><code>ArrayDeque</code>: 可扩容动态双向数组。</li>
+</ul>
+<h2><span id="map">Map</span></h2><ul>
+<li><code>HashMap</code>：JDK1.8 之前 <code>HashMap</code> 由数组+链表组成的，数组是 <code>HashMap</code> 的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。JDK1.8 以后在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8）（将链表转换成红黑树前会判断，如果当前数组的长度小于 64，那么会选择先进行数组扩容，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。</li>
+<li><code>LinkedHashMap</code>：<code>LinkedHashMap</code> 继承自 <code>HashMap</code>，所以它的底层仍然是基于拉链式散列结构即由数组和链表或红黑树组成。另外，<code>LinkedHashMap</code> 在之前结构的基础上，增加了一条双向链表，可以保持键值对的插入顺序。同时通过对链表进行相应的操作，实现了访问顺序相关逻辑。</li>
+<li><code>Hashtable</code>：数组+链表组成的，数组是 <code>Hashtable</code> 的主体，链表则是主要为了解决哈希冲突而存在的。</li>
+<li><code>TreeMap</code>：红黑树（自平衡的排序二叉树）。</li>
+</ul>
+<h1><span id="2arraylist-和-linkedlist-有什么区别">2.ArrayList 和 LinkedList 有什么区别？</span></h1><p>ArrayList 和 LinkedList 的区别主要体现在数据结构、用途、是否支持随机访问、内存占用等方面。</p>
+<p><strong>数据结构不同：</strong></p>
+<ul>
+<li>ArrayList 基于数组实现</li>
+<li>LinkedList 基于链表实现</li>
+</ul>
+<p><strong>用途不同：</strong></p>
+<p>多数情况下，ArrayList 更利于查找，LinkedList 更利于增删</p>
+<p>①、由于 ArrayList 是基于数组实现的，所以 <code>get(int index)</code> 可以直接通过数组下标获取，时间复杂度是 O(1)；LinkedList 是基于链表实现的，<code>get(int index)</code> 需要遍历链表，时间复杂度是 O(n)。</p>
+<p>当然，<code>get(E element)</code> 这种查找，两种集合都需要遍历通过 equals 比较获取元素，所以时间复杂度都是 O(n)。</p>
+<p>②、ArrayList 如果增删的是数组的尾部，直接插入或者删除就可以了，时间复杂度是 O(1)；如果 add 的时候涉及到扩容，时间复杂度会提升到 O(n)。</p>
+<p>但如果插入的是中间的位置，就需要把插入位置后的元素向前或者向后移动，甚至还有可能触发扩容，效率就会低很多，O(n)。</p>
+<p>LinkedList 因为是链表结构，插入和删除只需要改变前置节点、后置节点和插入节点的引用就行了，不需要移动元素。</p>
+<p>如果是在链表的头部插入或者删除，时间复杂度是 O(1)；如果是在链表的中间插入或者删除，时间复杂度是 O(n)，因为需要遍历链表找到插入位置；如果是在链表的尾部插入或者删除，时间复杂度是 O(1)。</p>
+<p><strong>注意</strong>，这里有个陷阱，LinkedList 更利于增删不是体现在时间复杂度上，因为二者增删的时间复杂度都是 O(n)，都需要遍历列表；而是体现在增删的效率上，因为 LinkedList 的增删只需要改变引用，而 ArrayList 的增删可能需要移动元素。</p>
+<p><strong>内存占用不同：</strong></p>
+<p>ArrayList 是基于数组的，是一块连续的内存空间，所以它的内存占用是比较紧凑的；但如果涉及到扩容，就会重新分配内存，空间是原来的 1.5 倍，存在一定的空间浪费。</p>
+<h1><span id="3arraylist-的扩容机制了解吗">3.ArrayList 的扩容机制了解吗？</span></h1><p>ArrayList 确切地说，应该叫做动态数组，因为它的底层是通过数组来实现的，当往 ArrayList 中添加元素时，会先检查是否需要扩容，如果当前容量+1 超过数组长度，就会进行扩容。扩容后的新数组长度是原来的 1.5 倍，然后再把原数组的值拷贝到新数组中。</p>
+<h1><span id="4能说一下-hashmap-的底层数据结构吗">4.能说一下 HashMap 的底层数据结构吗？</span></h1><p>JDK 8 中 HashMap 的数据结构是<code>数组</code>+<code>链表</code>+<code>红黑树</code>。</p>
+<p>HashMap 的核心是一个动态数组，用于存储键值对。这个数组的每个元素称为一个“桶”（Bucket），每个桶的索引是通过对键的哈希值进行哈希函数处理得到的。</p>
+<p>当多个键经哈希处理后得到相同的索引时，会发生哈希冲突。HashMap 通过链表来解决哈希冲突——即将具有相同索引的键值对通过链表连接起来。</p>
+<p>不过，链表过长时，查询效率会比较低，于是当链表的长度超过 8 时（且数组的长度大于 64），链表就会转换为红黑树。红黑树的查询效率是 O(logn)，比链表的 O(n) 要快。数组的查询效率是 O(1)。</p>
+<p>当向 HashMap 中添加一个键值对时，会使用哈希函数计算键的哈希码，确定其在数组中的位置，哈希函数的目标是尽量减少哈希冲突，保证元素能够均匀地分布在数组的每个位置上。</p>
+<p>当向 HashMap 中添加元素时，如果该位置已有元素（发生哈希冲突），则新元素将被添加到链表的末尾或红黑树中。如果键已经存在，其对应的值将被新值覆盖。</p>
+<p>当从 HashMap 中获取元素时，也会使用哈希函数计算键的位置，然后根据位置在数组、链表或者红黑树中查找元素。</p>
+<p>HashMap 的初始容量是 16，随着元素的不断添加，HashMap 的容量（也就是数组大小）可能不足，于是就需要进行扩容，阈值是<code>capacity * loadFactor</code>，capacity 为容量，loadFactor 为负载因子，默认为 0.75。</p>
+<p>扩容后的数组大小是原来的 2 倍，然后把原来的元素重新计算哈希值，放到新的数组中。</p>
+<p>总的来说，HashMap 是一种通过哈希表实现的键值对集合，它通过将键哈希化成数组索引，并在冲突时使用链表或红黑树来存储元素，从而实现快速的查找、插入和删除操作。</p>
+<h1><span id="5hashmap-的长度为什么是-2-的幂次方">5.HashMap 的长度为什么是 2 的幂次方</span></h1><ol>
+<li><strong>高效取模运算</strong>：<ul>
+<li>当哈希表的大小是 2 的幂次方时，可以通过位运算（按位与操作）来替代取模运算。例如，如果哈希表的大小是 16，那么可以通过 <code>(n - 1)</code> 来代替 <code>n % 16</code>，<code>即（ hash%length==hash&amp;(length-1)）</code>其中 <code>n</code> 是键的哈希值。位运算通常比取模运算更快。</li>
+</ul>
+</li>
+<li><strong>减少哈希碰撞</strong>：<ul>
+<li>当哈希表的大小是 2 的幂次方时，可以更均匀地分布键，从而减少哈希碰撞的可能性。</li>
+</ul>
+</li>
+</ol>
+<h1><span id="6hashmap-是线程安全的吗多线程下会有什么问题">6.HashMap 是线程安全的吗？多线程下会有什么问题？</span></h1><p>HashMap 不是线程安全的，主要有以下几个问题：</p>
+<p>①、多线程下扩容会死循环。JDK1.7 中的 HashMap 使用的是头插法插入元素，在多线程的环境下，扩容的时候就有可能导致出现环形链表，造成死循环。</p>
+<p>不过，JDK 8 时已经修复了这个问题，扩容时会保持链表原来的顺序。</p>
+<p>②、多线程的 put 可能会导致元素的丢失。因为计算出来的位置可能会被其他线程的 put 覆盖。本来哈希冲突是应该用链表的，但多线程时由于没有加锁，相同位置的元素可能就被干掉了。</p>
+<p>③、put 和 get 并发时，可能导致 get 为 null。线程 1 执行 put 时，因为元素个数超出阈值而导致出现扩容，线程 2 此时执行 get，就有可能出现这个问题。</p>
+<h1><span id="7有什么办法能解决-hashmap-线程不安全的问题呢">7.有什么办法能解决 HashMap 线程不安全的问题呢？</span></h1><p>在 Java 中，有 3 种线程安全的 Map 实现，最常用的是ConcurrentHashMap和<code>Collections.synchronizedMap</code>包装器。</p>
+<p>Hashtable 也是线程安全的，但它的使用已经不再推荐使用，因为 ConcurrentHashMap 提供了更高的并发性和性能。</p>
+<p>HashTable 是直接在方法上加 synchronized 关键字，比较粗暴。</p>
+<h1><span id="8linkedhashmap-怎么实现有序的">8.LinkedHashMap 怎么实现有序的？</span></h1><p>LinkedHashMap 维护了一个双向链表，有头尾节点，同时 LinkedHashMap 节点 Entry 内部除了继承 HashMap 的 Node 属性，还有 before 和 after 用于标识前置节点和后置节点。可以保持插入顺序，并且可以顺序访问。</p>
+<h1><span id="9treemap-怎么实现有序的">9.TreeMap 怎么实现有序的？</span></h1><p>TreeMap 通过 key 的比较器来决定元素的顺序，如果没有指定比较器，那么 key 必须实现 Comparable 接口。<br>TreeMap 的底层是红黑树，红黑树是一种自平衡的二叉查找树，每个节点都大于其左子树中的任何节点，小于其右子节点树种的任何节点。插入或者删除元素时通过旋转和着色来保持树的平衡。<br>查找的时候通过从根节点开始，利用二叉查找树的性质，逐步向左或者右子树递归查找，直到找到目标元素。</p>
+<h1><span id="10treemap-和-hashmap-的区别">10.TreeMap 和 HashMap 的区别</span></h1><p>①、HashMap 是基于数组+链表+红黑树实现的，put 元素的时候会先计算 key 的哈希值，然后通过哈希值计算出数组的索引，然后将元素插入到数组中，如果发生哈希冲突，会使用链表来解决，如果链表长度大于 8，会转换为红黑树。</p>
+<p>get 元素的时候同样会先计算 key 的哈希值，然后通过哈希值计算出数组的索引，如果遇到链表或者红黑树，会通过 key 的 equals 方法来判断是否是要找的元素。</p>
+<p>②、TreeMap 是基于红黑树实现的，put 元素的时候会先判断根节点是否为空，如果为空，直接插入到根节点，如果不为空，会通过 key 的比较器来判断元素应该插入到左子树还是右子树。</p>
+<p>get 元素的时候会通过 key 的比较器来判断元素的位置，然后递归查找。</p>
+<p>由于 HashMap 是基于哈希表实现的，所以在没有发生哈希冲突的情况下，HashMap 的查找效率是 O(1)。适用于查找操作比较频繁的场景。</p>
+<p>而 TreeMap 是基于红黑树实现的，所以 TreeMap 的查找效率是 O(logn)。并且保证了元素的顺序，因此适用于需要大量范围查找或者有序遍历的场景。</p>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/JVM/">JVM</a></li>
+                
+                
+                    <li>下一篇: <a href="/Spring/">Spring</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Linux - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Linux"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Linux</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1文件操作的命令">1.文件操作的命令</span></h1><ul>
+<li><code>ls</code>：列出目录内容。<code>ls -l</code>显示详细信息，<code>ls -a</code>显示隐藏文件。</li>
+<li><code>cd</code>：更改当前目录。<code>cd ..</code>回到上级目录，<code>cd ~</code>回到用户的主目录。</li>
+<li><code>pwd</code>：显示当前工作目录的完整路径。</li>
+<li><code>cp</code>：复制文件或目录。</li>
+<li><code>mv</code>：移动或重命名文件或目录。</li>
+<li><code>rm</code>：删除文件或目录。</li>
+<li><code>mkdir</code>：创建新目录。</li>
+<li><code>cat</code>：查看文件内容。</li>
+<li><code>touch</code>：创建文件</li>
+</ul>
+<h1><span id="2系统管理的命令">2.系统管理的命令</span></h1><ul>
+<li><code>ps</code>：显示当前运行的进程。<code>ps -ef</code>显示所有进程。</li>
+<li><code>top</code>：实时显示进程动态。</li>
+<li><code>kill</code>：终止进程。<code>kill -9 PID</code>强制终止。</li>
+<li><code>df</code>：显示磁盘空间使用情况。<code>df -h</code>以易读格式显示。</li>
+<li><code>du</code>：显示目录或文件的磁盘使用情况。</li>
+<li><code>free</code>：显示内存和交换空间的使用情况。</li>
+<li><code>chmod</code>：更改文件或目录的权限。</li>
+<li><code>chown</code>：更改文件或目录的所有者和所属组。</li>
+</ul>
+<h1><span id="3网络管理的命令">3.网络管理的命令</span></h1><ul>
+<li><code>ping</code>：检查与远程服务器的连接。</li>
+<li><code>wget</code>：从网络上下载文件。</li>
+<li><code>ifconfig</code>：显示网络接口的配置信息。</li>
+<li><code>netstat</code>：显示网络连接、路由表和网络接口信息。</li>
+</ul>
+<h1><span id="4压缩和解压的命令">4.压缩和解压的命令</span></h1><ul>
+<li><code>tar</code>：打包或解包<code>.tar</code>文件。<code>tar cvf archive.tar files</code>打包，<code>tar xvf archive.tar</code>解包。</li>
+<li><code>gzip</code> &#x2F; <code>gunzip</code>：压缩或解压<code>.gz</code>文件。</li>
+<li><code>zip</code> &#x2F; <code>unzip</code>：压缩或解压<code>.zip</code>文件。</li>
+</ul>
+<h1><span id="5chmod-的参数">5.chmod 的参数</span></h1><p>chmod 命令在 Linux 中用来改变文件或目录的访问权限。这个命令的使用可以基于符号表示法（也称为文本方法）或者八进制数表示法。</p>
+<p>像 <code>chmod 777 file</code> 赋予文件所有权限，就属于八进制数表示法。<code>7=4+2+1</code>，分别代表读、写、执行权限。</p>
+<p>Linux 中的权限可以应用于三种类别的用户：</p>
+<ul>
+<li>文件所有者（u）</li>
+<li>与文件所有者同组的用户（g）</li>
+<li>其他用户（o）</li>
+</ul>
+<p>①、符号模式</p>
+<p>符号模式使用字母来表示权限，如下：</p>
+<ul>
+<li>读（r）</li>
+<li>写（w）</li>
+<li>执行（x）</li>
+<li>所有（a）</li>
+</ul>
+<p>例如：</p>
+<ul>
+<li><code>chmod u+w file</code>：给文件所有者添加写权限。</li>
+<li><code>chmod g-r file</code>：移除组用户的读权限。</li>
+<li><code>chmod o+x file</code>：给其他用户添加执行权限。</li>
+<li><code>chmod u=rwx,g=rx,o=r file</code>：设置文件所有者具有读写执行权限，组用户具有读执行权限，其他用户具有读权限。</li>
+</ul>
+<p>②、数字模式</p>
+<p>数字模式使用三位八进制数来表示权限，每位数字代表不同的用户类别（所有者、组、其他用户），数字是其各自权限值的总和：</p>
+<ul>
+<li>读（r）&#x3D; 4</li>
+<li>写（w）&#x3D; 2</li>
+<li>执行（x）&#x3D; 1</li>
+</ul>
+<p>因此，权限模式可以是从 0（无权限）到 7（读写执行权限）的任何值。</p>
+<ul>
+<li>chmod 755 file：使得文件所有者有读写执行（7）权限，组用户和其他用户有读和执行（5）权限。</li>
+<li>chmod 644 file：使得文件所有者有读写（6）权限，而组用户和其他用户只有读（4）权限。</li>
+</ul>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/Redis1/">Redis1</a></li>
+                
+                
+                    <li>下一篇: <a href="/JUC1/">JUC 1</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

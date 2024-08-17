@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>Java基础1 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="Java基础1"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>Java基础1</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1什么是java">1.什么是Java？</span></h1><p>Java 是一门面向对象的编程语言，Java 吸收了 C++ 语言中大量的优点，但又抛弃了 C++ 中容易出错的地方，如垃圾回收。</p>
+<p>同时，Java 又是一门平台无关的编程语言，即一次编译，处处运行（Write Once，Run Anywhere），可以在 Windows、macOS、Linux 平台上运行，只需要安装一个 Java 虚拟机（JVM）。</p>
+<h1><span id="2jvm-jre-和-jdk-有什么区别">2.JVM、JRE 和 JDK 有什么区别？</span></h1><p><strong>JVM</strong>：Java Virtual Machine，也就是 Java 虚拟机，是 Java 实现跨平台的关键所在，针对不同的操作系统，有不同的 JVM 实现。JVM 负责将 Java 字节码转换为特定平台的机器码并执行。</p>
+<p><strong>JRE</strong>：Java Runtime Environment，也就是 Java 运行时环境，包含了运行 Java 程序所必需的库，以及 Java 虚拟机（JVM）。</p>
+<p><strong>JDK</strong>：Java Development Kit，是一套完整的 Java SDK（软件开发工具包），包括了 JRE 以及编译器（javac）、Java 文档生成工具（Javadoc）、Java 调试器等开发工具。为开发者提供了开发、编译、调试 Java 程序的一整套环境。</p>
+<p>简单来说，JDK 包含 JRE，JRE 包含 JVM。</p>
+<h1><span id="3java-se-与-java-ee-的区别">3.Java SE 与 Java EE 的区别</span></h1><ul>
+<li>Java SE（Java Platform，Standard Edition）: Java 平台标准版，Java 编程语言的基础，它包含了支持 Java 应用程序开发和运行的核心类库以及虚拟机等核心组件。Java SE 可以用于构建桌面应用程序或简单的服务器应用程序。</li>
+<li>Java EE（Java Platform, Enterprise Edition ）：Java 平台企业版，建立在 Java SE 的基础上，包含了支持企业级应用程序开发和部署的标准和规范（比如 Servlet、JSP、JDBC）。 Java EE 可以用于构建分布式、可移植、健壮和安全的服务端 Java 应用程序，例如 Web 应用程序。</li>
+</ul>
+<p>简单来说，Java SE 是 Java 的基础版本，Java EE 是 Java 的高级版本。Java SE 更适合开发桌面应用程序或简单的服务器应用程序，Java EE 更适合开发复杂的企业级应用程序或 Web 应用程序。</p>
+<p>除了 Java SE 和 Java EE，还有一个 Java ME（Java Platform，Micro Edition）。Java ME 是 Java 的微型版本，主要用于开发嵌入式电子设备的应用程序，例如手机、PDA、机顶盒、冰箱、空调等。不过现在几乎不用了。</p>
+<h1><span id="4什么是字节码">4.什么是字节码?</span></h1><p>在 Java 中，JVM 可以理解的代码就叫做字节码（即扩展名为 <code>.class</code> 的文件），它不面向任何特定的处理器，只面向虚拟机。Java 语言通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题，同时又保留了解释型语言可移植的特点。所以， Java 程序运行时相对来说还是高效的（不过，和 C、 C++，Rust，Go 等语言还是有一定差距的），而且，由于字节码并不针对一种特定的机器，因此，Java 程序无须重新编译便可在多种不同操作系统的计算机上运行。</p>
+<p>从编写Java代码到运行，整个过程包括：Java代码经 javac 编译生成字节码文件，JVM加载字节码文件，再通过解释器执行，有些方法和代码块可能会经常被调用，所以后面引入了JIT编译器，也就是即时编译器，当 JIT 编译器完成第一次编译后，其会将字节码对应的机器码保存下来，下次可以直接使用。而我们知道，机器码的运行效率肯定是高于 Java 解释器的。这也解释了我们为什么经常会说 <strong>Java 是编译与解释共存的语言</strong> 。</p>
+<h1><span id="5java-中的几种基本数据类型了解么">5.Java 中的几种基本数据类型了解么？</span></h1><p>Java 中有 8 种基本数据类型，分别为：</p>
+<ul>
+<li>6 种数字类型： <ul>
+<li>4 种整数型：<code>byte(1)</code>、<code>short(2)</code>、<code>int(4)</code>、<code>long(8)</code></li>
+<li>2 种浮点型：<code>float(4)</code>、<code>double(8)</code></li>
+</ul>
+</li>
+<li>1 种字符类型：<code>char(2)</code></li>
+<li>1 种布尔型：<code>boolean()</code>。</li>
+</ul>
+<p>这八种基本类型都有对应的包装类分别为：<code>Byte</code>、<code>Short</code>、<code>Integer</code>、<code>Long</code>、<code>Float</code>、<code>Double</code>、<code>Character</code>、<code>Boolean</code> 。</p>
+<h1><span id="6float-是怎么表示小数的">6.float 是怎么表示小数的？</span></h1><p><code>float</code>类型的小数在计算机中是通过 IEEE 754 标准的单精度浮点数格式来表示的。</p>
+<ul>
+<li>S：符号位，0 代表正数，1 代表负数；</li>
+<li>M：尾数部分，用于表示数值的精度；比如说 <code>1.25 * 2^2</code>；1.25 就是尾数；</li>
+<li>R：基数，十进制中的基数是 10，二进制中的基数是 2；</li>
+<li>E：指数部分，例如 10^-1 中的 -1 就是指数。</li>
+</ul>
+<p>这种表示方法可以将非常大或非常小的数值用有限的位数表示出来，但这也意味着可能会有精度上的损失。</p>
+<p>单精度浮点数占用 4 字节（32 位），这 32 位被分为三个部分：符号位、指数部分和尾数部分。</p>
+<ol>
+<li><strong>符号位（Sign bit）</strong>：1 位</li>
+<li><strong>指数部分（Exponent）</strong>：8 位</li>
+<li><strong>尾数部分（Mantissa，或 Fraction）</strong>：23 位</li>
+</ol>
+<p>使用浮点数时需要注意，由于精度的限制，进行数学运算时可能会遇到舍入误差，对于需要高精度计算的场景（如金融计算），可能需要考虑使用<code>BigDecimal</code>类来避免这种误差。</p>
+<h1><span id="7基本类型和包装类型的区别">7.基本类型和包装类型的区别</span></h1><p><strong>用途</strong>：除了定义一些常量和局部变量之外，我们在其他地方比如方法参数、对象属性中很少会使用基本类型来定义变量。并且，包装类型可用于泛型，而基本类型不可以。</p>
+<p><strong>存储方式</strong>：基本数据类型的局部变量存放在 Java 虚拟机栈中的局部变量表中，基本数据类型的成员变量（未被 <code>static</code> 修饰 ）存放在 Java 虚拟机的堆中。包装类型属于对象类型，我们知道几乎所有对象实例都存在于堆中。</p>
+<p><strong>占用空间</strong>：相比于包装类型（对象类型）， 基本数据类型占用的空间往往非常小。</p>
+<p><strong>默认值</strong>：成员变量包装类型不赋值就是 <code>null</code> ，而基本类型有默认值且不是 <code>null</code>。</p>
+<p><strong>比较方式</strong>：对于基本数据类型来说，<code>==</code> 比较的是值。对于包装数据类型来说，<code>==</code> 比较的是对象的内存地址。所有整型包装类对象之间值的比较，全部使用 <code>equals()</code> 方法。</p>
+<h1><span id="8包装类型的缓存机制是什么">8.包装类型的缓存机制是什么？</span></h1><p>Java 基本数据类型的包装类型的大部分都用到了缓存机制来提升性能。</p>
+<p><code>Byte</code>,<code>Short</code>,<code>Integer</code>,<code>Long</code> 这 4 种包装类默认创建了数值 <strong>[-128，127]</strong> 的相应类型的缓存数据，<code>Character</code> 创建了数值在 <strong>[0,127]</strong> 范围的缓存数据，<code>Boolean</code> 直接返回 <code>True</code> or <code>False</code>。</p>
+<h1><span id="9自动装箱与拆箱了解吗原理是什么">9.自动装箱与拆箱了解吗？原理是什么？</span></h1><ul>
+<li><strong>装箱</strong>：将基本类型用它们对应的引用类型包装起来；</li>
+<li><strong>拆箱</strong>：将包装类型转换为基本数据类型；</li>
+</ul>
+<p>如果频繁拆装箱的话，会严重影响系统的性能。我们应该尽量避免不必要的拆装箱操作</p>
+<h1><span id="10重载和重写的区别">10.重载和重写的区别？</span></h1><p><strong>重载：</strong><br>发生在同一个类中，方法名必须相同，参数类型不同、个数不同、顺序不同，方法返回值和访问修饰符可以不同。</p>
+<p><strong>重写：</strong></p>
+<p>重写发生在运行期，是子类对父类的允许访问的方法进行重新编写。</p>
+<ol>
+<li>方法名、参数列表必须相同，子类方法返回值类型应比父类方法返回值类型更小或相等，抛出的异常范围小于等于父类，访问修饰符范围大于等于父类。</li>
+<li>如果父类方法访问修饰符为 <code>private/final/static</code> 则子类就不能重写该方法，但是被 <code>static</code> 修饰的方法能够被再次声明。</li>
+<li>构造方法无法被重写</li>
+</ol>
+<h1><span id="11深拷贝和浅拷贝区别了解吗">11.深拷贝和浅拷贝区别了解吗？</span></h1><ul>
+<li><strong>浅拷贝</strong>：仅拷贝被拷贝对象的成员变量的值，也就是基本数据类型变量的值，和引用数据类型变量的地址值，而对于引用类型变量指向的堆中的对象不会拷贝。</li>
+<li><strong>深拷贝</strong>：完全拷贝一个对象，拷贝被拷贝对象的成员变量的值，堆中的对象也会拷贝一份。</li>
+</ul>
+<h1><span id="12x3dx3d-和-equals-的区别">12.&#x3D;&#x3D; 和 equals() 的区别</span></h1><p><strong><code>==</code></strong> 对于基本类型和引用类型的作用效果是不同的：</p>
+<ul>
+<li>对于基本数据类型来说，<code>==</code> 比较的是值。</li>
+<li>对于引用数据类型来说，<code>==</code> 比较的是对象的内存地址。</li>
+</ul>
+<blockquote>
+<p>因为 Java 只有值传递，所以，对于 &#x3D;&#x3D; 来说，不管是比较基本数据类型，还是引用数据类型的变量，其本质比较的都是值，只是引用类型变量存的值是对象的地址。</p>
+</blockquote>
+<p><strong><code>equals()</code></strong> 不能用于判断基本数据类型的变量，只能用来判断两个对象是否相等。<code>equals()</code>方法存在于<code>Object</code>类中，而<code>Object</code>类是所有类的直接或间接父类，因此所有的类都有<code>equals()</code>方法。</p>
+<p><code>equals()</code> 方法存在两种使用情况：</p>
+<ul>
+<li><strong>类没有重写 <code>equals()</code>方法</strong>：通过<code>equals()</code>比较该类的两个对象时，等价于通过“&#x3D;&#x3D;”比较这两个对象，使用的默认是 <code>Object</code>类<code>equals()</code>方法。</li>
+<li><strong>类重写了 <code>equals()</code>方法</strong>：一般我们都重写 <code>equals()</code>方法来比较两个对象中的属性是否相等；若它们的属性相等，则返回 true。</li>
+</ul>
+<h1><span id="13为什么要有-hashcode-方法">13.为什么要有 hashCode 方法？</span></h1><p>hashCode 方法主要用来获取对象的哈希码，哈希码是由对象的内存地址或者对象的属性计算出来的，它是⼀个 int 类型的整数，通常是不会重复的，因此可以用来作为键值对的键，以提高查询效率。<br>一般重写equals()方法的同时也要重写hashCode()方法，维护 <code>equals()</code>和 <code>hashCode()</code>之间的一致性是至关重要的，因为基于哈希的集合类（如 HashSet、HashMap、Hashtable 等）依赖于这一点来正确存储和检索对象。如果重写了 <code>equals()</code>方法而没有重写 <code>hashCode()</code>方法，那么被认为相等的对象可能会有不同的哈希码，从而导致无法在集合中正确处理这些对象。</p>
+<h1><span id="14java创建对象有几种方式">14.Java创建对象有几种方式？</span></h1><p>Java 有四种创建对象的方式：</p>
+<p>①、new 关键字创建，这是最常见和直接的方式，通过调用类的构造方法来创建对象。</p>
+<p>②、反射机制创建，反射机制允许在运行时创建对象，并且可以访问类的私有成员，在框架和工具类中比较常见。</p>
+<p>③、clone 拷贝创建，通过 clone 方法创建对象，需要实现 Cloneable 接口并重写 clone 方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Person</span> <span class="variable">person</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Person</span>();</span><br><span class="line"><span class="type">Person</span> <span class="variable">person2</span> <span class="operator">=</span> (Person) person.clone();</span><br></pre></td></tr></table></figure>
+
+<p>④、序列化机制创建，通过序列化将对象转换为字节流，再通过反序列化从字节流中恢复对象。需要实现 Serializable 接口。</p>
+<h1><span id="15string-和-stringbuilder-stringbuffer-的区别">15.String 和 StringBuilder、StringBuffer 的区别？</span></h1><p><code>String</code>、<code>StringBuilder</code>和<code>StringBuffer</code>在 Java 中都是用于处理字符串的，它们之间的区别是，String 是不可变的，平常开发用得最多，当遇到大量字符串连接时，就用 StringBuilder，它不会生成很多新的对象，StringBuffer 和 StringBuilder 类似，但每个方法上都加了 synchronized 关键字，所以是线程安全的。</p>
+<h1><span id="16string-s1-x3d-new-stringabc这句话创建了几个字符串对象">16.String s1 &#x3D; new String(“abc”);这句话创建了几个字符串对象？</span></h1><p>会创建 1 或 2 个字符串对象。</p>
+<p>1、如果字符串常量池中不存在字符串对象“abc”的引用，那么它会在堆上创建两个字符串对象，其中一个字符串对象的引用会被保存在字符串常量池中。</p>
+<p>2、如果字符串常量池中已存在字符串对象“abc”的引用，则只会在堆中创建 1 个字符串对象“abc”。</p>
+<h1><span id="17stringintern-方法有什么作用">17.String.intern 方法有什么作用?</span></h1><p><code>String.intern()</code> 是一个 native（本地）方法，其作用是将指定的字符串对象的引用保存在字符串常量池中，可以简单分为两种情况：</p>
+<ul>
+<li>如果字符串常量池中保存了对应的字符串对象的引用，就直接返回该引用。</li>
+<li>如果字符串常量池中没有保存了对应的字符串对象的引用，那就在常量池中创建一个指向该字符串对象的引用并返回。</li>
+</ul>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/JUC1/">JUC 1</a></li>
+                
+                
+                    <li>下一篇: <a href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C1/">计算机网络1</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

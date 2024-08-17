@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>操作系统1 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="操作系统1"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>操作系统1</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1什么是操作系统">1.什么是操作系统？</span></h1><p>操作系统（Operating System, OS）是计算机系统中管理硬件和软件资源的中间层系统，屏蔽了硬件的复杂性，并且为用户提供了便捷的交互方式，比如说 Windows、Linux、MacOS 等。</p>
+<h1><span id="2操作系统主要有哪些功能">2.操作系统主要有哪些功能？</span></h1><ol>
+<li><strong>进程管理</strong>：<ul>
+<li>负责创建、调度、终止进程，确保多任务的并发执行。</li>
+<li>处理进程间的通信和同步，保证进程间的协调和数据一致性。</li>
+</ul>
+</li>
+<li><strong>内存管理</strong>：<ul>
+<li>管理系统的物理内存和虚拟内存，分配和回收内存资源。</li>
+<li>实现内存保护和地址转换，确保不同进程的内存空间不会互相干扰。</li>
+</ul>
+</li>
+<li><strong>文件系统管理</strong>：<ul>
+<li>负责文件的创建、删除、读写和管理。</li>
+</ul>
+</li>
+<li><strong>设备管理</strong>：<ul>
+<li>管理和控制硬件设备（如硬盘、打印机、网络接口等），提供设备驱动程序。</li>
+</ul>
+</li>
+<li><strong>用户接口</strong>：<ul>
+<li>提供用户与计算机系统交互的接口，如命令行界面（CLI）和图形用户界面（GUI）。</li>
+</ul>
+</li>
+<li><strong>系统调用和服务</strong>：<ul>
+<li>提供系统调用接口，允许应用程序请求操作系统提供的服务（如文件操作、进程管理等）。</li>
+</ul>
+</li>
+<li><strong>网络管理</strong>：<ul>
+<li>提供网络协议栈，支持网络通信和数据传输。</li>
+<li>管理网络连接、路由、数据包传递等网络相关功能。</li>
+</ul>
+</li>
+</ol>
+<h1><span id="3什么是内核">3.什么是内核？</span></h1><p>内核是操作系统的核心组件，负责管理系统资源并提供基本服务。它位于操作系统的最底层，与硬件直接交互，控制和协调计算机系统的各种功能。内核的主要职责包括进程管理、内存管理、文件系统管理、设备管理、用户接口、系统调用和服务、网络管理等。</p>
+<h1><span id="4什么是用户态和内核态">4.什么是用户态和内核态？</span></h1><p>内核具有很⾼的权限，可以控制 cpu、内存、硬盘等硬件，出于权限控制的考虑，因此⼤多数操作系统，把内存分成了两个区域：</p>
+<ul>
+<li>内核空间，这个内存空间只有内核程序可以访问；</li>
+<li>用户空间，这个内存空间专门给应用程序使用，权限比较小；</li>
+</ul>
+<p><strong>用户态</strong>：当程序在用户空间执行时，它运行在用户态。这种模式下，程序的权限较低，只能执行受限的操作，并且需要通过系统调用请求内核的服务来完成需要更高权限的操作。</p>
+<p><strong>内核态</strong>：当程序需要执行涉及系统资源的操作（如文件读写、进程管理等）时，会触发一个系统调用或中断，从而进入内核态。内核态具有更高的权限，可以访问和控制所有内存空间以及硬件资源。</p>
+<h1><span id="5用户态和内核态是如何切换的">5.用户态和内核态是如何切换的？</span></h1><p>应⽤程序如果需要进⼊内核空间，就需要通过系统调⽤，来进入内核态。</p>
+<p>内核程序执⾏在内核态，⽤户程序执⾏在⽤户态。当应⽤程序使⽤系统调⽤时，会产⽣⼀个中断。发⽣中断后， CPU 会中断当前在执⾏的⽤户程序，转⽽跳转到中断处理程序，也就是开始执⾏内核程序。内核处理完后，主动触发中断，把 CPU 执⾏权限交回给⽤户程序，回到⽤户态继续⼯作。</p>
+<h1><span id="6并行和并发有什么区别">6.并行和并发有什么区别？</span></h1><p>并发就是在一段时间内，多个任务都会被处理；但在某一时刻，只有一个任务在执行。单核处理器做到的并发，其实是利用时间片的轮转，例如有两个进程 A 和 B，A 运行一个时间片之后，切换到 B，B 运行一个时间片之后又切换到 A。因为切换速度足够快，所以宏观上表现为在一段时间内能同时运行多个程序。</p>
+<p>并行就是在同一时刻，有多个任务在执行。这个需要多核处理器才能完成，在微观上就能同时执行多条指令，不同的程序被放到不同的处理器上运行，这个是物理上的多个进程同时进行。</p>
+<h1><span id="7什么是进程上下文切换">7.什么是进程上下文切换？</span></h1><p>上下文切换是操作系统在多任务处理环境中，将 CPU 从一个进程切换到另一个进程的过程。通过让多个进程共享 CPU 资源，使系统能够并发执行多个任务。</p>
+<p>进程上下文切换通畅包含以下几个步骤：</p>
+<p><strong>保存当前进程的上下文</strong></p>
+<ul>
+<li>当前进程的上下文信息包括其程序计数器（Program Counter，PC）、寄存器内容、栈指针（Stack Pointer）、状态寄存器，以及其他与CPU状态相关的内容。</li>
+<li>操作系统将这些信息保存到该进程的进程控制块（Process Control Block，PCB）中，以便稍后可以恢复该进程的执行状态。</li>
+</ul>
+<p><strong>选择新的进程</strong></p>
+<ul>
+<li>操作系统根据调度算法（如时间片轮转、优先级调度等）选择下一个需要执行的进程。</li>
+</ul>
+<p><strong>加载新进程的上下文</strong></p>
+<ul>
+<li>操作系统将新进程的上下文信息（即之前保存到其PCB中的内容）加载到CPU中。这包括恢复寄存器内容、栈指针和程序计数器等。</li>
+</ul>
+<p><strong>切换至新进程执行</strong></p>
+<ul>
+<li>上下文切换完成后，CPU开始执行新进程的指令，新的时间片开始。</li>
+</ul>
+<h1><span id="8pcb-是什么包含哪些信息">8.PCB 是什么？包含哪些信息？</span></h1><p><strong>PCB（Process Control Block）</strong> 即进程控制块，是操作系统中用来管理和跟踪进程的数据结构，每个进程都对应着一个独立的 PCB。</p>
+<p>当操作系统创建一个新进程时，会为该进程分配一个唯一的进程 ID，并且为该进程创建一个对应的进程控制块。当进程执行时，PCB 中的信息会不断变化，操作系统会根据这些信息来管理和调度进程。</p>
+<p>PCB 主要包含下面几部分的内容：</p>
+<ul>
+<li>进程的描述信息，包括进程的名称、标识符等等；</li>
+<li>进程的调度信息，包括进程阻塞原因、进程状态（就绪、运行、阻塞等）、进程优先级（标识进程的重要程度）等等；</li>
+<li>进程对资源的需求情况，包括 CPU 时间、内存空间、I&#x2F;O 设备等等。</li>
+<li>进程打开的文件信息，包括文件描述符、文件类型、打开模式等等。</li>
+<li>处理机的状态信息（由处理机的各种寄存器中的内容组成的），包括通用寄存器、指令计数器、程序状态字 PSW、用户栈指针。</li>
+</ul>
+<h1><span id="9进程有哪些状态">9.进程有哪些状态？</span></h1><p>当一个进程开始运行时，它可能会经历下面这几种状态：</p>
+<ul>
+<li>运⾏状态（<em>Runing</em>）：该时刻进程占⽤ CPU；</li>
+<li>就绪状态（<em>Ready</em>）：可运⾏，由于其他进程处于运⾏状态⽽暂时停⽌运⾏；</li>
+<li>阻塞状态（<em>Blocked</em>）：该进程正在等待某⼀事件发⽣（如等待输⼊&#x2F;输出操作的完成）⽽暂时停⽌运⾏，这时，即使给它 CPU 控制权，它也⽆法运⾏；</li>
+</ul>
+<p>当然，进程还有另外两个基本状态：</p>
+<ul>
+<li>创建状态（<em>new</em>）：进程正在被创建时的状态；</li>
+<li>结束状态（<em>Exit</em>）：进程正在从系统中消失时的状态；</li>
+</ul>
+<h1><span id="10什么是僵尸进程">10.什么是僵尸进程？</span></h1><p>僵尸进程是已完成且处于终止状态，但在进程表中却仍然存在的进程。</p>
+<p>僵尸进程一般发生有父子关系的进程中，一个子进程的<strong>进程描述符</strong>在子进程退出时不会释放，只有当父进程通过 wait() 或 waitpid() 获取了子进程信息后才会释放。如果子进程退出，而父进程并没有调用 wait() 或 waitpid()，那么子进程的进程描述符仍然保存在系统中。虽然僵尸进程本身不占用大量资源，但它在进程表中占用一个条目。如果系统中出现大量僵尸进程，进程表可能会被耗尽，导致系统无法再创建新进程。</p>
+<h1><span id="11什么是孤儿进程">11.什么是孤儿进程？</span></h1><p>一个父进程退出，而它的一个或多个子进程还在运行，那么这些子进程将成为孤儿进程。孤儿进程将被 init 进程 (进程 ID 为 1 的进程) 所收养，并由 init 进程对它们完成状态收集工作。因为孤儿进程会被 init 进程收养，所以孤儿进程不会对系统造成危害。</p>
+<h1><span id="12进程有哪些调度算法">12.进程有哪些调度算法？</span></h1><p>进程调度是操作系统中的核心功能之一，它负责决定哪些进程在何时使用 CPU。这一决定基于系统中的进程调度算法。</p>
+<p>①、<strong>先来先服务</strong></p>
+<p>这是最简单的调度算法，也称为先进先出（FIFO）。进程按照请求 CPU 的顺序进行调度。这种方式易于实现，但可能会导致较短的进程等待较长进程执行完成，从而产生“饥饿”现象。</p>
+<p>②、<strong>短作业优先</strong></p>
+<p>选择预计运行时间最短的进程优先执行。这种方式可以减少平均等待时间和响应时间，但缺点是很难准确预知进程的执行时间，并且可能因为短作业一直在执行，导致长作业持续被推迟执行。</p>
+<p>③、<strong>优先级调度</strong></p>
+<p>在这种调度方式中，每个进程都被分配一个优先级。CPU 首先分配给优先级最高的进程。优先级调度可以是非抢占式的或抢占式的。在非抢占式优先级调度中，进程一旦开始执行将一直运行直到完成；在抢占式优先级调度中，更高优先级的进程可以中断正在执行的低优先级进程。</p>
+<p>④、<strong>时间片轮转</strong></p>
+<p>时间片轮转调度为每个进程分配一个固定的时间段，称为时间片，进程可以在这个时间片内运行。如果进程在时间片结束时还没有完成，它将被放回队列的末尾。时间片轮转是公平的调度方式，可以保证所有进程得到公平的 CPU 时间，适用于共享系统。</p>
+<p>⑤、<strong>多级反馈队列</strong></p>
+<p>可以将这种调度算法看成是时间片轮转调度算法与优先级调度算法的结合。</p>
+<h1><span id="13进程间通信有哪些方式">13.进程间通信有哪些方式？</span></h1><p>进程间通信（IPC，Inter-Process Communication）的方式有管道、信号、消息队列、共享内存、信号量和套接字。</p>
+<ol>
+<li><strong>管道（Pipe）</strong></li>
+</ol>
+<ul>
+<li><strong>匿名管道</strong>：一种单向通信机制，通常用于有亲缘关系的进程（如父子进程）之间。数据只能从管道的一端写入，从另一端读取。</li>
+<li><strong>命名管道（FIFO）</strong>：支持双向通信，并且可以在没有亲缘关系的进程之间使用。命名管道在文件系统中有一个名字，进程可以通过这个名字进行通信。</li>
+<li><strong>特点</strong>：简单、高效，适合线性数据流的传递，但不支持复杂的数据结构。</li>
+</ul>
+<ol start="2">
+<li><strong>信号（Signal）</strong></li>
+</ol>
+<ul>
+<li>信号是一种有限的异步通信机制，用于通知进程某些事件的发生。常用于进程间的控制（如终止、暂停、继续运行等）。</li>
+<li><strong>特点</strong>：轻量级，适合简单的通知或中断操作，但不适合传输大量数据。</li>
+</ul>
+<ol start="3">
+<li><strong>消息队列（Message Queue）</strong></li>
+</ol>
+<ul>
+<li>消息队列允许多个进程以消息为单位进行通信，消息可以存储在内核中，按序传递。</li>
+<li>进程可以发送和接收消息，每个消息都有一个类型标识，接收方可以根据消息类型选择性地接收消息。</li>
+<li><strong>特点</strong>：支持复杂数据的传递，适合异步通信，允许多个发送者和接收者。</li>
+</ul>
+<ol start="4">
+<li><strong>共享内存（Shared Memory）</strong></li>
+</ol>
+<ul>
+<li>共享内存是多个进程直接共享一块内存区域，进程可以在这块区域内读写数据。</li>
+<li>因为数据不需要在进程之间复制，所以共享内存是最快的IPC方式之一。</li>
+<li><strong>特点</strong>：高效、快速，适合大数据量的传输，但需要进程间的同步机制（如信号量）来防止竞争条件。</li>
+</ul>
+<ol start="5">
+<li><strong>信号量（Semaphore）</strong></li>
+</ol>
+<ul>
+<li>信号量是一种同步机制，用于控制进程对共享资源的访问。它可以用于防止共享内存等资源的竞争条件。</li>
+<li>信号量可以是一个简单的计数器，用于跟踪和控制可用资源的数量，或者用于进程间的同步。</li>
+<li><strong>特点</strong>：主要用于进程同步和互斥，适合保护共享资源免受并发访问导致的冲突。</li>
+</ul>
+<ol start="6">
+<li><strong>套接字（Socket）</strong></li>
+</ol>
+<ul>
+<li>套接字不仅用于不同机器之间的网络通信，也可以用于同一台机器上进程间的通信。可以通过本地套接字（Unix Domain Socket）进行进程间通信。</li>
+<li>套接字支持双向通信，并且可以使用不同的协议（如TCP和UDP）进行通信。</li>
+<li><strong>特点</strong>：灵活，支持本地和远程进程间的通信，适合分布式系统中的进程通信。</li>
+</ul>
+<h1><span id="14进程和线程的联系和区别">14.进程和线程的联系和区别？</span></h1><p>线程和进程的联系：</p>
+<p><strong>线程是进程当中的⼀条执行流程。</strong></p>
+<p>同⼀个进程内多个线程之间可以共享代码段、数据段、打开的⽂件等资源，但每个线程各自都有⼀套独立的寄存器和栈，这样可以确保线程的控制流是相对独立的。</p>
+<p>线程与进程的比较如下：</p>
+<ul>
+<li>调度：进程是资源（包括内存、打开的⽂件等）分配的单位，线程是 CPU 调度的单位；</li>
+<li>资源：进程拥有⼀个完整的资源平台，⽽线程只独享必不可少的资源，如寄存器和栈；</li>
+<li>拥有资源：线程同样具有就绪、阻塞、执⾏三种基本状态，同样具有状态之间的转换关系；</li>
+<li>系统开销：线程能减少并发执⾏的时间和空间开销——创建或撤销进程时，系统都要为之分配或回收系统资源，如内存空间，I&#x2F;O 设备等，OS 所付出的开销显著大于在创建或撤销线程时的开销，进程切换的开销也远大于线程切换的开销。</li>
+</ul>
+<h1><span id="15线程上下文切换了解吗">15.线程上下文切换了解吗？</span></h1><p>这还得看线程是不是属于同⼀个进程：</p>
+<ul>
+<li>当两个线程不是属于同⼀个进程，则切换的过程就跟进程上下⽂切换⼀样；</li>
+<li><strong>当两个线程是属于同⼀个进程，因为虚拟内存是共享的，所以在切换时，虚拟内存这些共享资源就保持不动，只需要切换线程的私有数据、寄存器等不共享的数据</strong>；</li>
+</ul>
+<p>所以，线程的上下文切换相比进程，开销要小很多。</p>
+<h1><span id="16线程有哪些实现方式">16.线程有哪些实现方式？</span></h1><p>主要有三种线程的实现⽅式：</p>
+<ol>
+<li><strong>用户级线程</strong></li>
+</ol>
+<ul>
+<li><p><strong>概念</strong>：用户级线程是由用户空间的线程库管理的，线程的创建、调度和管理都在用户空间完成，不依赖操作系统的内核支持。</p>
+</li>
+<li><p>优点</p>
+<ul>
+<li>线程切换速度快，因为不涉及内核模式的切换。</li>
+<li>线程管理灵活，可以实现特定的调度算法。</li>
+</ul>
+</li>
+<li><p>缺点</p>
+<ul>
+<li><p>不能充分利用多处理器系统，因为内核只把整个进程看作一个调度单位。</p>
+</li>
+<li><p>如果一个线程阻塞（如I&#x2F;O操作），整个进程都会被阻塞，因为内核无法感知多个用户级线程的存在。</p>
+</li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li><strong>内核级线程</strong></li>
+</ol>
+<ul>
+<li><strong>概念</strong>：内核级线程由操作系统内核直接管理。线程的创建、调度、管理都由操作系统完成，每个线程都被内核视为独立的调度单位。</li>
+<li>优点<ul>
+<li>内核可以对每个线程进行独立调度，因此可以充分利用多处理器系统，多个线程可以并行执行。</li>
+<li>一个线程阻塞不会影响其他线程的运行，内核会继续调度其他线程。</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li>线程操作开销较大，因为涉及系统调用和内核模式的切换。</li>
+</ul>
+</li>
+</ul>
+<ol start="3">
+<li><strong>混合实现</strong></li>
+</ol>
+<ul>
+<li><strong>概念</strong>：混合实现结合了用户级线程和内核级线程的优点。在这种模型下，用户级线程映射到一个或多个内核级线程，用户级线程的调度由用户空间管理，但最终还是依赖于内核级线程。</li>
+<li>优点<ul>
+<li>可以有效利用多处理器系统，同时保持用户级线程的灵活性。</li>
+<li>线程的阻塞不会影响整个进程，因为可以将阻塞的用户级线程重新映射到其他内核级线程。</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li>实现复杂，需要处理用户级线程与内核级线程之间的映射和调度问题。</li>
+</ul>
+</li>
+</ul>
+<h1><span id="17线程间如何同步">17.线程间如何同步？</span></h1><p><strong>临界区</strong>：我们把对共享资源访问的程序片段称为临界区，我们希望这段代码是互斥的，保证在某时刻只能被一个线程执行，也就是说一个线程在临界区执行时，其它线程应该被阻止进入临界区。</p>
+<ol>
+<li><strong>互斥锁</strong></li>
+</ol>
+<ul>
+<li><strong>概念</strong>：互斥锁用于确保同一时间只有一个线程可以访问共享资源。线程在访问共享资源之前必须获得互斥锁，访问完毕后必须释放锁。</li>
+<li><strong>使用场景</strong>：适用于需要保护共享资源的并发访问，例如更新共享变量、写文件等。</li>
+</ul>
+<ol start="2">
+<li><strong>信号量</strong></li>
+</ol>
+<ul>
+<li><strong>概念</strong>：信号量是一个计数器，用于控制对多个共享资源的访问。信号量的值表示资源的数量。</li>
+<li><strong>使用场景</strong>：适用于限制某个资源的并发访问数，例如限制数据库连接池的最大连接数。</li>
+<li><strong>操作</strong><ul>
+<li>**P操作：减少信号量的值，如果信号量的值为0，则线程进入等待状态。</li>
+<li><strong>V操作</strong>：增加信号量的值，如果有线程在等待，则唤醒其中一个线程。</li>
+</ul>
+</li>
+</ul>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/Java%E5%9F%BA%E7%A1%802/">Java基础2</a></li>
+                
+                
+                    <li>下一篇: <a href="/%E6%B5%8B%E8%AF%95%E5%9F%BA%E7%A1%80/">测试基础</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>

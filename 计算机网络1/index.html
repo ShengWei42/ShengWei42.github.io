@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     
+    <meta charset="UTF-8">
+    <title>计算机网络1 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <link rel="shortcut icon" href="/static/img/icon.png">
+    <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
+    
+<link rel="stylesheet" href="/static/kico.css">
+<link rel="stylesheet" href="/static/hingle.css">
+
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
+    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:title" content="计算机网络1"/>
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+  <body>
+    <header>
+    <div class="head-title">
+        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+    </div>
+    <div class="head-action">
+        <div class="toggle-btn"></div>
+        <div class="light-btn"></div>
+        <div class="search-btn"></div>
+    </div>
+    <form class="head-search" method="post">
+        <input type="text" name="s" placeholder="搜索什么？">
+    </form>
+    <nav class="head-menu">
+        <a href="/">首页</a>
+        
+    </nav>
+</header>
+
+    <main>
+    <div class="wrap min">
+        <section class="post-title">
+            <h2>计算机网络1</h2>
+            <div class="post-meta">
+                <time class="date">2024.07.21</time>
+            
+            </div>
+        </section>
+        <article class="post-content">
+        
+            <h1><span id="1说下计算机网络体系结构">1.说下计算机网络体系结构</span></h1><p>计算机网络体系结构通过将复杂的网络通信分解成不同的层次，来标准化交互的过程。常见的模型包括 OSI 七层模型、TCP&#x2F;IP 四层模型和五层体系结构。OSI 是理论上的网络通信模型，TCP&#x2F;IP 是实际应用层面上的网络通信模型，五层结构是为了方便理解和记忆。</p>
+<h1><span id="2osi七层模型">2.OSI七层模型</span></h1><p>OSI七层参考模型是一个网络架构模型，由国际标准化组织（ISO）提出，用于描述和标准化各种计算机网络的功能和过程。这七层从低到高分别是：</p>
+<ul>
+<li><strong>应用层</strong>：最靠近用户的层，负责处理特定的应用程序细节。这一层提供了网络服务与用户应用软件之间的接口，如HTTP、FTP、SMTP、DNS等协议，使用户能够通过网络进行通信和资源共享。</li>
+<li><strong>表示层</strong>：确保不同系统之间的数据能够正确理解和处理。。它负责数据的转换、压缩和加密。</li>
+<li><strong>会话层</strong>：负责建立、管理和终止应用程序之间的会话。</li>
+<li><strong>传输层</strong>：提供端到端的通信服务，保证数据的完整性和正确顺序。这一层包括 TCP 和 UDP 等。</li>
+<li><strong>网络层</strong>：负责在多个网络之间进行数据传输，确保数据包从源地址正确到达目的地址。这层使用的是 IP协议。</li>
+<li><strong>数据链路层</strong>：在物理连接中提供可靠的传输，负责建立和维护两个相邻节点间的链路。包括帧同步、MAC（媒体访问控制）。</li>
+<li><strong>物理层</strong>：负责在物理媒介上实现原始的数据传输，比如电缆、光纤和无线信号传输。涉及的内容包括电压、接口、针脚、电缆的规格和传输速率等。</li>
+</ul>
+<h1><span id="3tcpx2fip-四层模型">3.TCP&#x2F;IP 四层模型</span></h1><ul>
+<li><strong>应用层</strong>：直接面向用户和应用程序，提供各种网络服务。它包含了用于特定应用的协议和服务，如 HTTP、FTP、SMTP等。</li>
+<li><strong>传输层</strong>：提供端到端的通信服务，确保数据可靠传输。它负责分段数据、流量控制、错误检测和纠正。常见的传输层协议有 TCP 和 UDP。</li>
+<li><strong>网际层</strong>：或者叫网络层，负责在不同网络之间传输数据包，核心协议是IP。常见的协议包括IPv4、IPv6、ICMP、ARP。</li>
+<li><strong>网络接口层</strong>：或者叫链路层，负责将数字信号在物理通道中准确传输。常见协议：以太网、Wi-Fi。</li>
+</ul>
+<h1><span id="4五层体系结构">4.五层体系结构</span></h1><p>是对 OSI 和 TCP&#x2F;IP 的折衷，它保留了 TCP&#x2F;IP 的实用性，同时提供了比四层模型更细致的分层，便于教学和理解网络的各个方面。</p>
+<ul>
+<li>应用层：作为网络服务和最终用户之间的接口。它提供了一系列供应用程序使用的协议，如 HTTP、FTP、SMTP等。</li>
+<li>传输层：提供端到端的数据传输服务，确保数据在源主机和目标主机之间可靠传输，或提供快速传输。</li>
+<li>网络层：负责数据包的路由选择和转发，确保数据可以跨越多个网络传输到目标地址。</li>
+<li>数据链路层：负责将数据帧从一个节点可靠地传输到相邻节点，解决物理层可能出现的错误，进行帧的传输与接收。</li>
+<li>物理层：负责物理介质上的比特流传输，将数据以电信号、光信号或无线信号的形式在设备之间进行传递。</li>
+</ul>
+<h1><span id="5应用层有哪些常见的协议">5.应用层有哪些常见的协议？</span></h1><ul>
+<li>**HTTP(超文本传输协议)**︰基于TCP协议，用于在Web浏览器和Web服务器之间传输超文本信息（如HTML页面、图片、视频等）。默认使用端口80（HTTPS使用443端口）。</li>
+<li>**SMTP(简单邮件发送协议)**︰基于TCP协议，是一种用于发送电子邮件的协议，默认使用端口25。注意：SMTP协议只负责邮件的发送，而不是接收。要从邮件服务器接收邮件，需要使用POP3或 IMAP协议。</li>
+<li>**POP3&#x2F;IMAP(邮件接收协议)**︰基于TCP协议，两者都是负责邮件接收的协议。IMAP协议是比POP3更新的协议，它在功能和性能上都更加强大。IMAP支持邮件搜索、标记、分类、归档等高级功能，而且可以在多个设备之间同步邮件状态。几乎所有现代电子邮件客户端和服务器都支持IMAP。</li>
+<li><strong>FTP (文件传输协议)<strong>︰基于TCP协议，用于在客户端和服务器之间传输文件，默认使用端口21。注意：FTP是一种不安全的协议，因为它在传输过程中不会对数据进行加密。建议在传输敏感数据时使用更安全的协议，如</strong>SFTP</strong>。</li>
+<li>**Telnet(远程登陆协议)**︰基于TCP协议，用于远程登录到服务器，执行命令行操作，默认使用端口23。Telnet 协议的最大缺点之一是所有数据（包括用户名和密码)均以明文形式发送，这有潜在的安全风险。这就是为什么如今很少使用Telnet，而是使用一种称为SSH的非常安全的网络传输协议的主要原因。</li>
+<li>**SSH (安全的网络传输协议)**︰基于TCP协议，通过加密和认证机制实现安全的访问和文件传输等业务，默认使用端口22。</li>
+<li>**RTP (实时传输协议)**︰通常基于UDP协议，但也支持TCP协议。用于实时传输音频、视频等多媒体数据，常用于视频会议、网络电话等实时应用。</li>
+<li>**DNS (域名管理系统)**︰基于UDP协议，用于解决域名和IP地址的映射问题，默认使用端口53。</li>
+</ul>
+<h1><span id="6传输层有哪些常见的协议">6.传输层有哪些常见的协议？</span></h1><ul>
+<li><p><strong>TCP</strong>：提供面向连接的，可靠的数据传输服务。</p>
+</li>
+<li><p><strong>UDP</strong>：提供无连接的，尽最大努力的数据传输服务（不保证数据传输的可靠性），简单高效。</p>
+</li>
+</ul>
+<h1><span id="7网络层有哪些常见的协议">7.网络层有哪些常见的协议？</span></h1><ul>
+<li><strong>IP</strong>∶TCP&#x2F;IP协议中最重要的协议之一，属于网络层的协议，主要作用是定义数据包的格式、对数据包进行路由和寻址，以便它们可以跨网络传播并到达正确的目的地。目前IP协议主要分为两种，一种是过去的IPv4，另一种是较新的IPv6，目前这两种协议都在使用，但后者已经被提议来取代前者。</li>
+<li>**ARP (地址解析协议)**︰ARP协议解决的是网络层地址和链路层地址之间的转换问题。因为一个IP数据报在物理上传输的过程中，总是需要知道下一跳(物理上的下一个目的地）该去往何处，但IP地址属于逻辑地址，而MAC地址才是物理地址，ARP协议解决了IP地址转MAC地址的一些问题。</li>
+<li>**ICMP (互联网控制报文协议)**︰一种用于传输网络状态和错误消息的协议，常用于网络诊断和故障排除。例如，Ping 工具就使用了ICMP协议来测试网络连通性。.</li>
+</ul>
+<h1><span id="8从浏览器地址栏输入-url-到显示主页的过程">8.从浏览器地址栏输入 url 到显示主页的过程？</span></h1><p>从在浏览器地址栏输入 URL 到显示主页的过程包括多个步骤，涵盖了 DNS 解析、TCP 连接、发送 HTTP 请求、服务器处理请求并返回 HTTP 响应、浏览器处理响应并渲染页面等多个环节。</p>
+<ol>
+<li><strong>DNS 解析</strong>：浏览器发起一个 DNS 请求到 DNS 服务器，将域名解析为服务器的 IP 地址。</li>
+<li><strong>TCP 连接</strong>：浏览器通过解析得到的 IP 地址与服务器建立 TCP 连接（通常是通过 443 端口进行 SSL 加密的 HTTPS 连接）。这一步涉及到 TCP 的三次握手过程，确保双方都准备好进行数据传输。</li>
+<li><strong>发送 HTTP 请求</strong>：浏览器构建 HTTP 请求消息，包括请求行、请求头和请求体（如果有），将请求发送到服务器。</li>
+<li><strong>服务器处理请求</strong>：服务器接收到 HTTP 请求后，根据请求的资源路径，经过后端处理，生成 HTTP 响应消息；响应消息包括状态行、响应头和响应体。</li>
+<li><strong>浏览器接收 HTTP 响应</strong>：浏览器接收到服务器返回的 HTTP 响应数据，开始解析响应体中的 HTML 内容；然后构建 DOM 树、解析 CSS 和 JavaScript 文件等，最终渲染页面。</li>
+<li><strong>断开连接</strong>：TCP 四次挥手，连接结束</li>
+</ol>
+<h1><span id="9说说-dns-的解析过程">9.说说 DNS 的解析过程？</span></h1><p>DNS也就是域名解析系统，它可以将域名映射到对应的 IP 地址上。</p>
+<ul>
+<li>假如我们在浏览器地址栏里键入 <code>shengweicode.cn</code> 时，浏览器会首先检查自己的缓存中是否有这个域名对应的IP地址，如果有，直接返回；如果没有，进入下一步，检查本地操作系统的DNS缓存是否有该域名的记录。如果仍然没有找到，浏览器会向配置的DNS解析器（通常由ISP或第三方提供）发送查询请求。</li>
+<li>解析器首先向<strong>根域名服务器</strong>发送请求，根域名服务器会指向更具体的服务器，比如 <code>cn</code> 顶级域名服务器。然后，<code>cn</code> 顶级域名服务器将请求转发到 <code>shengweicode.cn</code> 的<strong>权威DNS服务器</strong>，因为该域名是在阿里云注册的，所以该服务器由阿里云管理，负责将 <code>shengweicode.cn</code> 解析为对应的IP地址。最终，浏览器使用获得的IP地址发起一个HTTP请求到目标服务器，该服务器返回所请求的网页内容。</li>
+</ul>
+<h1><span id="10说说-http-常用的状态码及其含义">10.说说 HTTP 常用的状态码及其含义？</span></h1><p>HTTP 响应状态码是由服务器返回给客户端，用于表示对请求的响应结果。</p>
+<p>这些状态码分为五个不同的类别，每个类别用一个数字开头，共有三位数：</p>
+<ul>
+<li>1XX：临时的响应，客户端应继续请求。</li>
+<li>2XX：请求已成功被服务器接收。</li>
+<li>3XX：用来重定向。</li>
+<li>4XX：客户端出错。<ul>
+<li><strong>400 Bad Request</strong>：服务器无法理解客户端的请求，通常是由于请求语法错误。</li>
+<li><strong>401 Unauthorized</strong>：请求要求身份验证。客户端需要提供正确的身份认证信息。</li>
+<li><strong>403 Forbidden</strong>：服务器拒绝请求，客户端无权访问资源。</li>
+<li><strong>404 Not Found</strong>：服务器无法找到请求的资源。通常是客户端请求的URL错误。</li>
+</ul>
+</li>
+<li>5XX：服务端出错。<ul>
+<li><strong>500</strong>：服务器内部错误，无法完成请求。</li>
+</ul>
+</li>
+</ul>
+<h1><span id="11http-有哪些请求方式">11.HTTP 有哪些请求方式？</span></h1><p>HTTP 协议定义了多种请求方式，用以指示请求的目的。常见的请求方式有 GET、POST、DELETE、PUT。</p>
+<ul>
+<li>GET：请求检索指定的资源。应该只用于获取数据，并且是幂等的，即多次执行相同的 GET 请求应该返回相同的结果，并且不会改变资源的状态。</li>
+<li>POST：向指定资源提交数据，请求服务器进行处理（如提交表单或上传文件）。数据被包含在请求体中。可能会创建新的资源或修改现有资源。</li>
+<li>DELETE：删除指定的资源。</li>
+<li>PUT：用于替换指定的资源。如果指定的资源不存在，创建一个新资源。</li>
+</ul>
+<h1><span id="12说一下-get-和-post-的区别">12.说一下 GET 和 POST 的区别？</span></h1><ol>
+<li>从 HTTP 报文层面来看，GET 请求将信息放在 URL，POST 将请求信息放在请求体中。这一点使得 GET 请求携带的数据量有限，因为 URL 本身是有长度限制的，而 POST 请求的数据存放在报文体中，因此对大小没有限制。而且从形式上看，GET 请求把数据放 URL 上不太安全，而 POST 请求把数据放在请求体里想比较而言安全一些。</li>
+<li>从数据库层面来看，GET 符合幂等性和安全性，而 POST 请求不符合。这个其实和 GET&#x2F;POST 请求的作用有关。按照 HTTP 的约定，GET 请求用于查看信息，不会改变服务器上的信息；而 POST 请求用来改变服务器上的信息。正因为 GET 请求只查看信息，不改变信息，对数据库的一次或多次操作获得的结果是一致的，认为它符合幂等性。安全性是指对数据库操作没有改变数据库中的数据。</li>
+<li>还有就是，GET 请求能够被缓存，GET 请求能够保存在浏览器的浏览记录里，GET 请求的 URL 能够保存为浏览器书签。这些都是 POST 请求所不具备的。缓存是 GET 请求被广泛应用的根本，他能够被缓存也是因为它的幂等性和安全性，除了返回结果没有其他多余的动作，因此绝大部分的 GET 请求都被 CDN 缓存起来了，大大减少了 Web 服务器的负担。</li>
+</ol>
+<h1><span id="13说一下-http-的报文结构">13.说一下 HTTP 的报文结构？</span></h1><p>HTTP 的报文结构可以分为两类：请求报文和响应报文。两者在结构上相似，都包含了<strong>起始行</strong>、<strong>头部</strong>和<strong>消息正文</strong>。</p>
+<p><strong>HTTP 请求报文：</strong></p>
+<p>①请求行：包括方法（如 GET、POST）、请求的 URL 和 HTTP 协议的版本。</p>
+<p>②请求头：包含请求的附加信息，如客户端想要接收的内容类型、浏览器类型等。请求头部由键值对组成，键和值之间用冒号分隔，每一行一个键值对。</p>
+<p>③空行：请求头和消息正文之间有一个空行，表示请求头结束。</p>
+<p>④请求体：请求的具体内容，如 POST 请求中的数据，GET 请求中没有请求体。</p>
+<p><strong>HTTP 响应报文：</strong></p>
+<p>①状态行：包括 HTTP 协议的版本、状态码（如 200、404）和状态消息（如 OK、NotFound）。</p>
+<p>②响应头：包含响应的附加信息，如服务器类型、内容类型、内容长度等。也是由键值对组成。</p>
+<p>③空行：表示响应头部结束。</p>
+<p>④响应体：响应的具体内容，如 HTML 页面。</p>
+<h1><span id="14uri-和-url-的区别是什么">14.URI 和 URL 的区别是什么?</span></h1><ul>
+<li>URI 是统一资源标志符，可以唯一标识一个资源。</li>
+<li>URL 是统一资源定位符，可以提供该资源的路径。它是一种具体的 URI，即 URL 可以用来标识一个资源，而且还指明了如何定位这个资源。</li>
+</ul>
+<p>URI 的作用像身份证号一样，URL 的作用更像家庭住址一样。URL 是一种具体的 URI，它不仅唯一标识资源，而且还提供了定位该资源的方式和信息。</p>
+<h1><span id="15说下-http101120-的区别">15.说下 HTTP1.0，1.1，2.0 的区别？</span></h1><p><strong>HTTP1.0</strong></p>
+<ul>
+<li><strong>无状态协议</strong>：HTTP 1.0 是无状态的，每个请求之间相互独立，服务器不保存任何请求的状态信息。</li>
+<li><strong>非持久连接</strong>：默认情况下，每个 HTTP 请求&#x2F;响应对之后，连接会被关闭，属于短连接。这意味着对于同一个网站的每个资源请求，都需要建立一个新的 TCP 连接。可以设置强制开启长连接。</li>
+</ul>
+<p><strong>HTTP1.1</strong></p>
+<ul>
+<li><strong>持久连接</strong>：HTTP 1.1 引入了持久连接，默认情况下不会立即关闭连接，可以在一个连接上发送多个请求和响应。极大减轻了 TCP 连接的开销。</li>
+<li><strong>流水线处理</strong>：HTTP 1.1 支持客户端在前一个请求的响应到达之前发送下一个请求，以提高传输效率。</li>
+</ul>
+<p><strong>HTTP2.0</strong></p>
+<ul>
+<li><strong>二进制协议</strong>：HTTP 2.0 使用二进制而不是文本格式来传输数据，解析更加高效。</li>
+<li><strong>多路复用</strong>：一个 TCP 连接上可以同时进行多个 HTTP 请求&#x2F;响应，解决了 HTTP 1.x 的队头阻塞问题。</li>
+<li><strong>头部压缩</strong>：HTTP 协议不带状态，所以每次请求都必须附上所有信息。HTTP 2.0 引入了头部压缩机制，可以使用 gzip 压缩后再发送，减少了带宽消耗。</li>
+<li><strong>服务端推送</strong>：服务器可以主动向客户端推送资源，而不需要客户端明确请求。</li>
+</ul>
+<h1><span id="16说说-http-与-https-有哪些区别">16.说说 HTTP 与 HTTPS 有哪些区别？</span></h1><ol>
+<li>HTTPS 是 HTTP 的增强版，在 HTTP 的基础上加入了 SSL&#x2F;TLS 协议，确保数据在传输过程中是加密的。</li>
+<li>HTTP 的默认端⼝号是 80，URL 以<code>http://</code>开头；HTTPS 的默认端⼝号是 443，URL 以<code>https://</code>开头。</li>
+<li>SEO（搜索引擎优化）：搜索引擎通常会更青睐使用 HTTPS 协议的网站，因为 HTTPS 能够提供更高的安全性和用户隐私保护。使用 HTTPS 协议的网站在搜索结果中可能会被优先显示，从而对 SEO 产生影响。</li>
+</ol>
+<h1><span id="17什么是-websocket">17.什么是 WebSocket?</span></h1><p>WebSocket 是一种基于 TCP 连接的全双工通信协议，即客户端和服务器可以同时发送和接收数据。</p>
+<p>WebSocket 协议在 2008 年诞生，2011 年成为国际标准，几乎所有主流较新版本的浏览器都支持该协议。不过，WebSocket 不只能在基于浏览器的应用程序中使用，很多编程语言、框架和服务器都提供了 WebSocket 支持。</p>
+<p>WebSocket 协议本质上是应用层的协议，用于弥补 HTTP 协议在持久通信能力上的不足。客户端和服务器仅需一次握手，两者之间就直接可以创建持久性的连接，并进行双向数据传输。</p>
+<p>WebSocket 的常见应用场景：</p>
+<ul>
+<li>视频弹幕</li>
+<li>实时消息推送</li>
+<li>实时游戏对战</li>
+<li>多用户协同编辑</li>
+<li>社交聊天</li>
+</ul>
+
+        </article>
+        <section class="post-near">
+            <ul>
+                
+                    <li>上一篇: <a href="/Java%E5%9F%BA%E7%A1%801/">Java基础1</a></li>
+                
+                
+                    <li>下一篇: <a href="/MySQL1/">MySQL1</a></li>
+                
+            </ul>
+        </section>
+        
+    
+        <section class="post-author">
+        
+            <figure class="author-avatar">
+                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+            </figure>
+        
+            <div class="author-info">
+                <h4>Hingle</h4>
+                <p>请在这里设置你的作者信息</p>
+            </div>
+        </section>
+    
+    </div>
+</main>
+
+    <footer>
+    <div class="buttons">
+        <a class="to-top" href="#"></a>
+    </div>
+    <div class="wrap min">
+        <section class="widget">
+            <div class="row">
+                <div class="col-m-4">
+                    <h3 class="title-recent">最新文章：</h3>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                </div>
+            </div>
+        </section>
+        <section class="sub-footer">
+            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+        </section>
+    </div>
+</footer>
+
+
+<script src="/static/kico.js"></script>
+<script src="/static/hingle.js"></script>
+
+
+<script>var hingle = new Paul_Hingle({"copyright":false,"night":false});</script>
+
+  </body>
+</html>
