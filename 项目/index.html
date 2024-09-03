@@ -3,7 +3,7 @@
   <head>
      
     <meta charset="UTF-8">
-    <title>项目 - 测开、Java后端最常见、最核心的面试题总结</title>
+    <title>项目 - Java后端与测试核心面试题总结</title>
     <link rel="shortcut icon" href="/static/img/icon.png">
     <link rel="icon" href="/static/img/icon.png" sizes="192x192"/>
     
@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1"/>
-    <meta property="og:site_name" content="测开、Java后端最常见、最核心的面试题总结">
+    <meta property="og:site_name" content="Java后端与测试核心面试题总结">
     <meta property="og:title" content="项目"/>
     
 <meta name="generator" content="Hexo 7.3.0"></head>
@@ -22,7 +22,7 @@
   <body>
     <header>
     <div class="head-title">
-        <h4>测开、Java后端最常见、最核心的面试题总结</h4>
+        <h4>Java后端与测试核心面试题总结</h4>
     </div>
     <div class="head-action">
         <div class="toggle-btn"></div>
@@ -49,15 +49,97 @@
         </section>
         <article class="post-content">
         
-            
+            <h1><span id="兴趣推送">兴趣推送</span></h1><p>内容推送也叫做Feed流，直译为投喂。为用户持续的提供“沉浸式”的体验，通过无限下拉刷新获取新的信息。Feed流产品有两种常见模式：</p>
+<ul>
+<li>Timeline：不做内容筛选，简单的按照内容发布时间排序，常用于好友或关注，例如朋友圈。</li>
+<li>算法推荐：利用推荐算法屏蔽掉违规的、用户不感兴趣的内容。推送用户感兴趣的内容。例如抖音、快手。</li>
+</ul>
+<p>而我的项目是一个在线的web短视频平台，更适合使用算法推荐模式。而常见的推荐算法有很多，比如：</p>
+<ul>
+<li>协同过滤：通过分析用户的历史行为（如点赞、评论、浏览）和相似用户的行为，推荐用户可能感兴趣的内容。</li>
+<li>基于内容的推荐：根据用户过去喜欢的内容特征（如主题、关键词）推荐类似的内容。</li>
+<li>深度学习和图算法：利用深度学习模型分析复杂的用户行为数据，或通过图算法构建用户和内容之间的关系图来进行推荐。</li>
+</ul>
+<p>我这里使用的是协同过滤算法。协同过滤算法的核心思想是“物以类聚，人以群分”，即相似的用户会对相似的物品感兴趣。该算法有两种实现机制：</p>
+<ul>
+<li>基于用户的协同过滤：这种方法根据用户的行为相似性来推荐物品。具体来说，如果用户A与用户B的历史行为非常相似，那么B喜欢的物品A可能也会喜欢。</li>
+<li>核心步骤：<ol>
+<li>计算用户相似性：使用某种相似度度量（如余弦相似度、皮尔逊相关系数）计算用户之间的相似性。</li>
+<li>找到相似用户：对于目标用户，找到一组与其最相似的用户。</li>
+<li>推荐物品：根据这些相似用户的行为，推荐目标用户尚未接触过的物品。</li>
+</ol>
+</li>
+<li>基于物品的协同过滤：这种方法根据物品的相似性来推荐物品。具体来说，如果物品A和物品B被用户以类似的方式进行评分，那么喜欢物品A的用户可能也会喜欢物品B。</li>
+</ul>
+<ol>
+<li>我这里使用的是基于用户的协同过滤。它适合社交网络等需要通过用户关系进行推荐的场景。在项目中，我是使用Apache Mahout库来实现基于用户的协同过滤算法。Apache Mahout 是一个流行的机器学习库，支持多种推荐算法，包括基于用户的协同过滤。要使用Apache Mahout库的api，最重要的是收集用户对视频的评分。</li>
+<li>具体的实现流程是前端根据用户对视频的一些操作，比如点赞、评论、收藏等，每个操作有一个权值，生成一个评分，然后将视频id和评分发送到后端，后端再保存到数据库当中。因为要使用Apache Mahout的一些api，需要传入一个.csv文件，所以需要将数据库中的评分表定期导出到csv文件中。可以使用SQL命令手动导出，或者编写Java代码自动导出。我这里是选择编写Java代码，实现一个定时任务将评分表导出到csv文件中。具体做法是先从数据库中查出评分数据，然后通过io流写到csv文件当中。</li>
+</ol>
+<h1><span id="关注推送">关注推送</span></h1><p>关注推送和之前的兴趣推送不同，它只会向用户呈现自己关注了的up主的视频。这里的实现我是基于feed流中的 Timeline模式，不做内容筛选，简单的按照视频发布时间排序。<br>Timeline的实现方案有三种：</p>
+<ul>
+<li>拉模式：up主发消息的时候，只会将消息发送到自己的发件箱当中，粉丝读消息的时候都需要从关注的up主的发件箱中拉取</li>
+<li>推模式：up主发消息的时候，直接推送到自己所有粉丝的收件箱当中，粉丝不需要从up主的发件箱当中拉取</li>
+<li>推拉模式：将up主分为粉丝特别多的大v和粉丝少的普通up主，将粉丝分为活跃粉丝和普通的粉丝，大v发消息的时候，消息既需要发送到自己的发件箱当中，也需要把消息发送到每个活跃粉丝的收件箱当中；而普通up主发消息的时候只发送到自己的发件箱当中。</li>
+</ul>
+<ol>
+<li>由于我的项目用户量比较小，没有什么大v，所以采用拉模式。具体流程是：用户发布视频时，在保存视频信息到数据库的同时，还需要推送到粉丝的收件箱当中。收件箱需要满足可以根据时间戳排序，所以采用redis中的数据结构实现。前端在查询时，由于内容可能会更新，所以不能采用传统的分页模式，而是采用滚动分页。</li>
+<li>这里有一个问题是究竟使用redis中的哪个数据结构实现收件箱，一开始有两个选择，分别是list和sorted set，因为list和sorted set都能实现按时间戳排序。但是滚动排序的实现必须记住上一次查询最后的位置，如果查询时插入了新内容，list的角标就会发生变化，查询时可能导致内容重复，虽然sorted set按照排名查询，排名也会有可能发生变化，但是sorted set可以记住上一次查询最后位置的score，不依赖于角标，即使中途插入了新数据也不会内容重复，所以综合来看，我选择了sorted set。其中的key是粉丝的id，当然要与其他的业务分隔开，需要在key之前拼接上一个收件箱业务的前缀(Inbox)，score是视频发布时的时间戳。</li>
+<li>要实现滚动分页，需要用到sorted set的一个命令：<code>zrevrangebyscore key max min withscores limit offset count</code>。其中的min表示score的最小值，可以恒为0，count表示每页查询的条数，和前端商量好也是个定值。所以需要考量的参数只有key，max和offset。key表示当前用户的收件箱，后端可以从threadlocal中拿到，max表示score的最大值，如果是第一次查询，则max为当前时间戳，offset的取值为0，之后的查询max取值则是上一次查询的最小时间戳，offset的取值为在上一次的查询结果中，与最小值一样的元素的个数。所以每次返回给前端的数据包括三部分：分别是小于指定时间戳的视频集合、本次查询的最小时间戳以及偏移量。</li>
+</ol>
+<h1><span id="视频点赞">视频点赞</span></h1><p>虽然我们的项目目前用户量不大，但为了确保系统在未来可能增长的用户规模下依然能够稳定运行，我进行了压力测试。从中发现了一些在正常用户量下不易察觉的异常：</p>
+<ol>
+<li><p><strong>问题描述：</strong></p>
+<ul>
+<li>在实现视频点赞功能时，要求每个用户最多只能给同一个视频点一个赞。这个功能是为了防止用户利用脚本刷赞，从而影响热度排行榜的准确性。</li>
+<li>现有的逻辑是：先判断用户是否点赞过，如果点赞过则取消点赞，否则才允许点赞。使用JMeter模拟多线程环境时发现，同一用户能够多次点赞同一视频，暴露出数据安全问题。</li>
+</ul>
+<p><strong>问题分析：</strong></p>
+<ul>
+<li>多线程环境下，多个线程可能同时查询用户是否点赞，从而导致数据竞争。由于点赞表的数据在插入之前并不存在，无法使用乐观锁来解决这个问题。</li>
+</ul>
+<p><strong>解决思路：</strong></p>
+<ul>
+<li>使用悲观锁控制整个点赞流程，即在查询点赞表、更新点赞数、插入点赞数据这一过程封装成方法并加锁。</li>
+<li>由于加锁的方法上使用了<code>synchronized</code>关键字，默认锁的是当前对象<code>this</code>，导致方法串行执行，性能较差。应该是通过锁定用户<code>id</code>来实现更细粒度的锁。</li>
+</ul>
+<p><strong>锁定用户ID：</strong></p>
+<ul>
+<li>由于直接锁定<code>id</code>对象的效果不好（<code>toString()</code>方法生成的是新的对象），需要将<code>id</code>转为<code>String</code>后再调用<code>intern()</code>方法，确保锁住同一个用户的操作。</li>
+</ul>
+<p><strong>事务与锁的协调：</strong></p>
+<ul>
+<li>在锁定范围内执行点赞操作，事务是由Spring管理的，但锁的范围仅限于方法内部。锁释放后，如果事务还未提交，其他此时其他线程又来执行，就会导致其他线程出现线程安全问题。</li>
+<li>为了解决此问题，需要在调用点赞方法的地方进行加锁，以确保事务提交后再释放锁。</li>
+</ul>
+<p><strong>Spring事务失效问题：</strong></p>
+<ul>
+<li>此时又涉及到Spring中事务失效的问题了。由于虽然点赞方法是加了<code>@Transactional</code>注解，但是在Spring中，事务生效其实是Spring对当前类做了动态代理，通过当前类的代理对象进行事务管理。而在方法内部调用点赞方法，其实是通过<code>this</code>调用的，而this是非代理对象，是没有事务功能的。解决办法是利用<code>AopContext类中的currentProxy()</code>方法拿到当前对象的代理对象进行方法调用。</li>
+</ul>
+</li>
+<li><p><strong>RabbitMQ消息丢失或延迟</strong>：在高并发条件下，由于RabbitMQ消息的处理延迟，导致Redis与数据库的点赞数据出现不一致。虽然在当前用户量下这种情况极少发生，但在压力测试中频繁出现。</p>
+<ul>
+<li><p><strong>问题发现</strong>：</p>
+<ul>
+<li>初始实现中，消费者的并发处理能力不足，尤其在大量消息涌入时，处理速度跟不上，导致消息在队列中堆积。</li>
+</ul>
+<p><strong>解决措施</strong>：</p>
+<ul>
+<li><strong>增加消费者线程</strong>：通过增加消费者的线程数来提高并发处理能力。使用线程池来提高消费速度。</li>
+<li><strong>批量处理</strong>：对于一些可以批量处理的操作（如更新数据库），通过合并消息的方式减少单个消息的处理时间。比如，多个点赞操作可以合并成一个数据库操作。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+
         </article>
         <section class="post-near">
             <ul>
                 
-                    <li>上一篇: 看完啦 (つд⊂)</li>
+                    <li>上一篇: <a href="/RabbitMQ/">RabbitMQ</a></li>
                 
                 
-                    <li>下一篇: <a href="/MySQL2/">MySQL2</a></li>
+                    <li>下一篇: <a href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li>
                 
             </ul>
         </section>
@@ -66,12 +148,12 @@
         <section class="post-author">
         
             <figure class="author-avatar">
-                <img src="https://sdn.geekzu.org/avatar/d22eb460ecab37fcd7205e6a3c55c228?s=200&r=X&d=" alt="Hingle" />
+                <img src="https://imgs.699pic.com/images/500/614/672.jpg!list1x.v2" alt="shengwei" />
             </figure>
         
             <div class="author-info">
-                <h4>Hingle</h4>
-                <p>请在这里设置你的作者信息</p>
+                <h4>shengwei</h4>
+                <p>一个编程爱好者</p>
             </div>
         </section>
     
@@ -87,12 +169,12 @@
             <div class="row">
                 <div class="col-m-4">
                     <h3 class="title-recent">最新文章：</h3>
-                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/MySQL2/">MySQL2</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/Redis2/">Redis2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C2/">计算机网络2</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F2/">操作系统2</a></li></ul>
+                    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/Git+Docker+%E5%89%8D%E7%AB%AF/">Git+Docker+前端</a></li><li class="post-list-item"><a class="post-list-link" href="/RabbitMQ/">RabbitMQ</a></li><li class="post-list-item"><a class="post-list-link" href="/%E9%A1%B9%E7%9B%AE/">项目</a></li><li class="post-list-item"><a class="post-list-link" href="/Java17%E6%96%B0%E7%89%B9%E6%80%A7/">Java17新特性</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></li><li class="post-list-item"><a class="post-list-link" href="/%E6%B5%8B%E8%AF%95%E5%9F%BA%E7%A1%80/">测试基础</a></li></ul>
                 </div>
             </div>
         </section>
         <section class="sub-footer">
-            <p>© 2024 <a href="/">测开、Java后端最常见、最核心的面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
+            <p>© 2024 <a href="/">Java后端与测试核心面试题总结</a>. All Rights Reserved. Theme By <a href="https://github.com/Dreamer-Paul/Hingle" target="_blank" rel="nofollow">Hingle</a>.</p>
         </section>
     </div>
 </footer>
