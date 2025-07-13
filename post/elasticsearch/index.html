@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Elasticsearch | shengwei的个人博客</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://shengwei42.github.io/favicon.ico?v=1752389319188">
+<link rel="stylesheet" href="https://shengwei42.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="什么是elasticsearch
+elasticsearch是一款非常强大的开源搜索引擎技术，可以帮助我们从海量数据中快速找到需要的内容。
+
+elasticsearch是elastic stack的核心，负责存储、搜索、分析数据。elast..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://shengwei42.github.io">
+        <img src="https://shengwei42.github.io/images/avatar.png?v=1752389319188" class="site-logo">
+        <h1 class="site-title">shengwei的个人博客</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/tags" class="site-nav">
+            关于我
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      一个记录日常学习笔记的博客网站
+    </div>
+    <div class="site-footer">
+      联系：zhoushengwei42@gmail.com
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Elasticsearch</h2>
+            <div class="post-date">2025-06-27</div>
+            
+            <div class="post-content" v-pre>
+              <h1 id="什么是elasticsearch">什么是elasticsearch</h1>
+<p>elasticsearch是一款非常强大的开源搜索引擎技术，可以帮助我们从海量数据中快速找到需要的内容。</p>
+<ol>
+<li>elasticsearch是elastic stack的核心，负责存储、搜索、分析数据。elasticsearch底层实现是基于Lucene技术</li>
+<li>Kibana是数据可视化的组件，也就是展示搜索出来的数据。</li>
+<li>Logstash、Beats是负责数据抓取的组件。Lucene是一个Java语言的搜索引擎类库(其实就是一个jar包），是Apache公司的顶级项目，由DougCutting于1999年研发。Lucene官网：https：//lucene.apache.org<br>
+Lucene的优势<br>
+● 易扩展<br>
+● 高性能(基于倒排索引)<br>
+Lucene的缺点<br>
+● 只限于Java语言开发<br>
+● 学习曲线陡峭，也就是API复杂不利于学习<br>
+● 不支持水平扩展，只负责如何实现搜索，不支持高并发、集群扩展<br>
+由于Lucene的缺点，诞生出了elasticsearch，与Lucene相比，elasticsearch（基于Lucene，且Compass是elasticsearch的前身)具有以下优点：<br>
+● 支持分布式，可水平扩展<br>
+● 提供Restful接口，可被任何语言调用<br>
+● elasticsearch的核心技术是倒排索引。</li>
+</ol>
+<h1 id="倒排索引">倒排索引</h1>
+<p>传统数据库（例如MvSQL）采用正向索引，例如给下表(tb_goods)中的id创建索引：<br>
+id	Title	Price<br>
+1	小米手机	3499<br>
+2	华为手机	5999<br>
+3	华为小米充电器	39<br>
+4	小米手环	49<br>
+...	...	...<br>
+搜索手机：select * from tb_goods where title like '%手机%';<br>
+需要逐条数据扫描，判断是否包含‘手机’，是的话才会存入结果集，否则丢弃。虽然最后能找到满足条件的数据，但是一条条数据进行比对，太低效，如果数据量庞大，那么搜索效率就会成为瓶颈，这就是正向索引的弊端。<br>
+elasticsearch采用倒排索引，例如给上表(tb_goods)中的id创建索引：<br>
+词条(term)	文档id<br>
+小米	1，3，4<br>
+手机	1，2<br>
+华为	2，3<br>
+充电器	3<br>
+手环	4<br>
+文档（document）：每条数据就是一个文档<br>
+词条（term）：文档按照语义分成的词语<br>
+搜索‘华为手机’，流程：</p>
+<ol>
+<li>分词，得到：‘华为’、‘手机’两个词条</li>
+<li>去词条列表查询文档id，得到每个词条所在文档id：华为：2，3；手机：1，2</li>
+<li>根据文档id查询文档，得到id为1，2，3的文档<br>
+总结<br>
+1、正向索引：基于文档id来创建索引。查询词条时必须先找到文档，而后判断是否包含词条<br>
+2、倒排索引：对文档内容进行分词，对词条创建索引1，并记录词条所在文档的信息。查询时先根据词条去查询文<br>
+档id，然后获取到文档</li>
+</ol>
+<h1 id="elasticsearch对比mysql">elasticsearch对比mysql</h1>
+<p>elasticsearch是面向文档存储的，可以是数据库中的一条商品数据，一个订单信息。注意elasticsearch的文档是以json形式存储的，也就是说，我们把数据(也叫文档)存储进elasticsearch时，这些文档数据就会自动被序列化为json格式，然后才存储进elasticsearch<br>
+MySQL	Elasticsearch	说明<br>
+Table	Index	索引(index)，就是文档的集合，类似数据库的表(table)<br>
+Row	Document	文档(Document)，就是一条条的数据，类似数据库中的行(Row)。这里的文档都是JSON格式<br>
+Column	Field	字段(Field)，就是JSON文档中的字段，类似数据库中的列(Column)<br>
+Schema	Mapping	Mapping(映射)是索引中文档的约束，例如字段类型约束。类似数据库的表结构(Schema)<br>
+SQL	DSL	DSL是elasticsearch提供的JSON风格的请求语句，用来操作elasticsearch，实现CRUD<br>
+1、MySQL： 擅长事务类型的操作，可以确保数据的安全和一致性。一般用于增删改<br>
+2、Elasticsearch： 擅长海量数据的搜索、分析、计算。一般用于查询<br>
+两者是互补关系，不是替代关系，因此在业务系统架构中，两者都会存在，让用户在MySQL里面增删改数据，然后MySQL把数据同步给elasticsearch，用户要查询的时候，就在elasticsearch里面进行查询</p>
+<h1 id="安装elasticsearch">安装elasticsearch</h1>
+<p>安装elasticsearch，简称es<br>
+第一步： 创建网络。因为我们还需要部署kibana容器，因此需要让es和kibana容器互联<br>
+systemctl start docker#启动docker服务<br>
+docker networkcreatees-net#创建一个网络，名字是es-net<br>
+第二步： 加载es镜像。采用elasticsearch的7.12.1版本的镜像，这个镜像体积有800多MB，所以需要在Windows上下载链接安装包，下载下来是一个es的镜像tar包，然后传到CentOS7的/root目录<br>
+第三步： 把在CentOS7的/root目录的es镜像，导入到docker<br>
+docker load -i es.tar<br>
+第四步： 创建并运行es容器，容器名称就叫es。在docker(也叫Docker大容器、Docker主机、宿主机)，根据es镜像来创建es容器<br>
+docker run -d<br>
+--name es<br>
+-e &quot;ES_JAVA_0PTS=-Xms512m -Xmx512m&quot;<br>
+-e &quot;discovery.type=single-node&quot;<br>
+-V es-data：/usr/share/elasticsearch/data<br>
+-V es-plugins：/usr/share/elasticsearch/plugins<br>
+--privileged <br>
+--network es-net<br>
+-p 9200：9200<br>
+-p 9300：9300<br>
+elasticsearch：7.12.1<br>
+命令解释：<br>
+● -e &quot;cluster.name=es-docker-cluster&quot;：设置集群名称<br>
+● -e &quot;http.host=0.0.0.0&quot;：监听的地址，可以外网访问<br>
+● -e &quot;ES_JAVA_OPTS=-Xms512m -Xmx512m&quot;：内存大小，不能低于512<br>
+● -e &quot;discovery.type=single-node&quot;：运行模式，例如非集群模式<br>
+● -v es-data：/usr/share/elasticsearch/data：挂载数据卷，绑定es的数据目录<br>
+● -v es-logs：/usr/share/elasticsearch/logs：挂载数据卷，绑定es的日志目录<br>
+● -v es-plugins：/usr/share/elasticsearch/plugins：挂载数据卷，绑定es的插件目录<br>
+● --privileged：授予数据卷访问权<br>
+● --network es-net ：加入一个名为es-net的网络中<br>
+● -p 9200：9200：端口映射配置，向外暴露的http请求端口，用于用户访问<br>
+● -p 9300：9300：端口映射配置，是es容器各个节点之间互相访问的端口，由于我们是单节点部署，所以用不到<br>
+● elasticsearch：7.12.1： 镜像名称，要把哪个镜像创建为容器，注意带版本号<br>
+然后，在浏览器中输入：http：//你的ip地址：9200 即可看到elasticsearch的响应结果</p>
+<p>安装kibana<br>
+kibana 的作用： 让我们非常方便的去编写elasticsearch中的DSL语句，从而去操作elasticsearch<br>
+第一步： 确保docker是启动的<br>
+第二步： 加载kibana镜像。这个镜像体积有1.04G，所以需要在Windows上下载链接安装包，下载下来是一个kibana.tar文件，然后传到CentOS7的/root目录<br>
+第三步： 把在CentOS7的/root目录的kibana镜像，导入到docker<br>
+docker load -i kibana.tar<br>
+第四步： 创建并运行kibana容器，容器名称就叫kibana。在docker(也叫Docker大容器、Docker主机、宿主机)，根据kibana镜像来创建kibana容器<br>
+docker run -d<br>
+--name kibana<br>
+-e ELASTICSEARCH_H0STS=http：//es：9200<br>
+--network=es-net<br>
+-p 5601：5601<br>
+kibana：7.12.1<br>
+#--name：指定容器的名字，例如kibana<br>
+#--networkes-net：加入一个名为es-net的网络中，与elasticsearch在同一个网络中<br>
+#-eELASTICSEARCH_HOSTS：由于kibana和es会被我们设置在同一个网络，所以这里的kibana可以通过容器名直接访问es，es的容器名我们在#上一节设置的是es<br>
+#-e ELASTICSEARCH_HOSTS：设置elasticsearch的地址，因为kibana已经与elasticsearch在一个网络，因此可以用容器名直接访问#elasticsearch<br>
+#-p5601：5601：端口映射配置，向外暴露的http请求端口，用于用户访问<br>
+第五步： kibana启动一般比较慢，需要多等待一会，可以通过命令<br>
+dockerlogs-fkibana#查看运行日志，当查看到下面的日志，说明成功<br>
+第六步： 测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果</p>
+<p>安装IK分词器<br>
+IK分词器官网： https：//github.com/medcl/elasticsearch-analysis-ik。注意elasticsearch、kibana、IK分词器，这三者通常是一起使用的<br>
+es在创建倒排索引时，需要对文档进行分词。在搜索时，需要对用户输入的内容进行分词。但默认的分词规则不支持中文处理，默认是只支持对英文进行分词，但是在正常业务中，我们需要处理的文档大多是中文，所以我们需要对中文进行分词，所以就需要安装IK分词器</p>
+<ol>
+<li>第一步： 我们在 '安装elasticsearch' 创建elasticsearch容器时，指定了数据卷目录，其中有个数据卷指定了自定义名称为es-plugins，表示存放插件的数据卷，我们使用inspect命令把es-plugins数据卷的路径信息查询出来</li>
+<li>第二步： 下载ik.zip压缩包到Windows，下载后解压出来是ik文件夹，根据上面查询出来的es-plugins数据卷的路径，把ik文件夹上传到CentOS7的 /var/lib/docker/volumes/es-plugins/_data 目录</li>
+<li>第三步： 重启elasticsearch容器，我们在 '安装elasticsearch' 创建elasticsearch容器时，指定了自定义容器名称为es</li>
+<li>第四步： 查看elasticsearch容器的启动日志</li>
+<li>第五步： 确保elasticsearch、kibana已正常运行</li>
+<li>第六步： 测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果<br>
+IK分词器包含两种模式：<br>
+● ik_smart：最少切分，根据语义分词，正常分词<br>
+● ik_max_word：最细切分，也是根据语义分词，分的词语更多，更细<br>
+IK分词器的词典扩展和停用<br>
+Ik分词器的分词，底层是一个字典，在字典里面会有各种各样的词语，当ik分词器需要对分词文本进行分词时，ik分词器就会拿着这个文本(乱拆成多个词或词语)，一个个去字典里面匹配，如果能匹配到，证明某个词(乱拆成多个词或词语)是词，就把这个证明后的词分出来，作为一个词。<br>
+第一个问题： 字典的分词效果是有限的，只能对日常生活中常见的语义相关的词，进行分词，由于字典的词汇量少，所以我们需要对字典进行扩展。<br>
+第二个问题： 字典的分词效果往往存在违禁词，我们不希望IK分词器能匹配并成功把词典里的违禁词作为分词，解决： 禁用某些敏感词条<br>
+解决：<br>
+1、要拓展或禁用ik分词器的词库，只需要修改一个分词器目录中的config目录中的IKAnalyzer.cfg.xml文件<br>
+2、在config目录新建myext.dic文件，写入自己想要的特定词，也就是扩展词。新建mystopword.dic文件，写入自己想要禁用的特定词，也就是不参与分词的词<br>
+3、重新启动elasticsearch、kibana<br>
+4、测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果</li>
+</ol>
+<h1 id="es-dsl操作文档">ES-DSL操作文档</h1>
+<ol>
+<li>
+<p>mapping属性<br>
+mapping属性的官方文档： https：//elastic.co/guide/en/elasticsearch/reference/current/index.html<br>
+MySQL	Elasticsearch	说明<br>
+Table	Index	索引(index)，就是文档的集合，类似数据库的表(table)<br>
+Row	Document	文档(Document)，就是一条条的数据，类似数据库中的行(Row)。这里的文档都是JSON格式<br>
+Column	Field	字段(Field)，就是JSON文档中的字段，类似数据库中的列(Column)<br>
+Schema	Mapping	Mapping(映射)是索引中文档的约束，例如字段类型约束。类似数据库的表结构(Schema)<br>
+SQL	DSL	DSL是elasticsearch提供的JSON风格的请求语句，用来操作elasticsearch，实现CRUD<br>
+mapping是对索引库中文档(es中的文档是json风格)的约束，常见的mapping属性包括如下<br>
+● type：字段数据类型<br>
+○ 字符串(分两种)： text（可分词的文本）、keyword（精确值，例如：品牌、国家、ip地址等不可分词的词语）<br>
+○ 数值： long、integer、short、byte、double、float<br>
+○ 布尔： boolean<br>
+○ 日期： date<br>
+○ 对象：object<br>
+● index：是否创建倒排索引，默认为true(也就是可参与分词搜索)，改成false的话，别人就搜索不到你<br>
+● analyzer：分词器，当字段类型是text时必须指定分词器。如果字段类型是keyword，那么不需要指定分词器<br>
+● properties：子字段，也就是属性和子属性</p>
+</li>
+<li>
+<p>创建索引库<br>
+创建索引库和mapping的DSL语法如下，需通过Kibana的Dev Tools（访问http：//你的ip地址：5601）发送请求。以下是一个完整的示例：<br>
+PUT /索引库名<br>
+{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // text类型，指定中文分词器<br>
+&quot;age&quot;： { &quot;type&quot;： &quot;integer&quot; }, // 数值类型<br>
+&quot;email&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值，不分词<br>
+&quot;address&quot;： {<br>
+&quot;type&quot;： &quot;object&quot;, // 对象类型<br>
+&quot;properties&quot;： {<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;street&quot;： { &quot;type&quot;： &quot;text&quot; }<br>
+}<br>
+},<br>
+&quot;is_active&quot;： { &quot;type&quot;： &quot;boolean&quot;, &quot;index&quot;： true } // 布尔类型，可搜索<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● 确保删除注释后再发送请求。<br>
+● analyzer 只对text类型字段有效，中文场景建议使用ik_max_word（需安装IK分词器）。<br>
+● 如果索引已存在，重复创建会报错。</p>
+</li>
+<li>
+<p>查询、修改、删除索引库</p>
+</li>
+<li>
+<p>查询索引库语法<br>
+● 查询所有索引：<br>
+GET /_cat/indices?v<br>
+返回所有索引的详细信息，包括状态、文档数量等。<br>
+● 查询指定索引的mapping：<br>
+GET /索引库名/_mapping<br>
+返回索引库名索引的mapping定义。</p>
+</li>
+<li>
+<p>往索引库添加新字段<br>
+索引库的mapping无法直接修改，但可以添加新字段。语法如下：<br>
+PUT /索引库名/_mapping<br>
+{<br>
+&quot;properties&quot;： {<br>
+&quot;new_field&quot;： {<br>
+&quot;type&quot;： &quot;keyword&quot;<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● 新字段名不能与已有字段重复，否则报错。<br>
+● 已有的字段类型无法修改（如text不能改为keyword）。</p>
+</li>
+<li>
+<p>删除索引库语法<br>
+删除指定索引库：<br>
+DELETE /索引库名<br>
+注意：<br>
+● 删除操作不可恢复，谨慎使用。<br>
+● 如果索引不存在，ES会返回错误。</p>
+</li>
+<li>
+<p>新增、查询、删除文档</p>
+</li>
+<li>
+<p>新增文档的DSL语法<br>
+添加文档到指定索引库，文档ID可手动指定或由ES自动生成：<br>
+POST /索引库名/_doc/1<br>
+{<br>
+&quot;name&quot;： &quot;张三&quot;,<br>
+&quot;age&quot;： 25,<br>
+&quot;email&quot;： &quot;zhangsan@example.com&quot;,<br>
+&quot;address&quot;： {<br>
+&quot;city&quot;： &quot;北京&quot;,<br>
+&quot;street&quot;： &quot;朝阳路&quot;<br>
+},<br>
+&quot;is_active&quot;： true<br>
+}<br>
+注意：<br>
+● 如果省略文档ID（如用POST /索引库名/_doc），ES会生成随机ID。<br>
+● 建议手动指定ID，便于后续操作。</p>
+</li>
+<li>
+<p>查询文档<br>
+查询指定文档：<br>
+GET /索引库名/_doc/1<br>
+返回文档内容，包括_source字段中的JSON数据。</p>
+</li>
+<li>
+<p>删除文档<br>
+删除指定文档：<br>
+DELETE /索引库名/_doc/1<br>
+注意：<br>
+● 删除后不可恢复。<br>
+● 如果文档ID不存在，ES会返回not_found。</p>
+</li>
+<li>
+<p>修改文档<br>
+方式一：全量修改<br>
+全量修改会覆盖旧文档，等同于删除旧文档并添加新文档。语法如下：<br>
+PUT /索引库名/_doc/1<br>
+{<br>
+&quot;name&quot;： &quot;张三&quot;,<br>
+&quot;age&quot;： 26, // 修改年龄<br>
+&quot;email&quot;： &quot;zhangsan@example.com&quot;,<br>
+&quot;address&quot;： {<br>
+&quot;city&quot;： &quot;北京&quot;,<br>
+&quot;street&quot;： &quot;朝阳路&quot;<br>
+},<br>
+&quot;is_active&quot;： true<br>
+}<br>
+注意：<br>
+● 必须包含所有字段，否则未指定的字段会被删除。<br>
+● 如果文档ID不存在，此操作会变为新增。<br>
+方式二：增量修改<br>
+只修改指定字段的值，保留其他字段不变。语法如下：<br>
+POST /索引库名/_update/1<br>
+{<br>
+&quot;doc&quot;： {<br>
+&quot;age&quot;： 26 // 只修改年龄<br>
+}<br>
+}<br>
+注意：<br>
+● 使用_update接口，仅更新指定字段。<br>
+● 如果文档ID不存在，此操作会变为新增（需确保mapping支持新字段）。</p>
+</li>
+</ol>
+<h1 id="es-restclient操作文档">ES-RestClient操作文档</h1>
+<ol>
+<li>
+<p>Ascertaining RestClient Case Preparation<br>
+● 第一步：在数据库软件（如 MySQL）中导入 tb_hotel.sql，确保数据库中包含酒店数据表 tb_hotel，字段包括 id, name, brand, address, price, star, city, latitude, longitude 等。<br>
+● 第二步：解压 hotel-demo.zip，在 IntelliJ IDEA 中打开 hotel-demo 项目。<br>
+● 第三步：修改 application.yml，配置数据库连接信息，例如：<br>
+spring：<br>
+datasource：<br>
+url： jdbc：mysql：//localhost：3306/your_database<br>
+username： your_username<br>
+password： your_password</p>
+</li>
+<li>
+<p>Hotel 数据结构分析<br>
+MySQL 数据结构（基于 tb_hotel.sql）：<br>
+字段名	数据类型	说明<br>
+id	BIGINT	主键，酒店ID<br>
+name	VARCHAR	酒店名称<br>
+brand	VARCHAR	酒店品牌<br>
+address	VARCHAR	酒店地址<br>
+price	DECIMAL	价格<br>
+star	INT	星级<br>
+city	VARCHAR	城市<br>
+latitude	DECIMAL	纬度<br>
+longitude	DECIMAL	经度<br>
+Elasticsearch Mapping（基于 MySQL 结构）：<br>
+{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;id&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值，不分词<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // 可分词，中文分词器<br>
+&quot;brand&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值<br>
+&quot;address&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // 可分词<br>
+&quot;price&quot;： { &quot;type&quot;： &quot;double&quot; }, // 浮点数<br>
+&quot;star&quot;： { &quot;type&quot;： &quot;integer&quot; }, // 整数<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值<br>
+&quot;location&quot;： { &quot;type&quot;： &quot;geo_point&quot; } // 经纬度合并为 geo_point 类型<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● latitude 和 longitude 合并为 location 字段，使用 geo_point 类型，格式为 { &quot;lat&quot;： 纬度, &quot;lon&quot;： 经度 }。<br>
+● 中文字段（如 name, address）使用 IK 分词器（需安装）。<br>
+● index： true 为默认值，可省略。</p>
+</li>
+<li>
+<p>初始化 RestClient<br>
+第一步：在 pom.xml 添加依赖：<br>
+<dependency><br>
+<groupId>org.elasticsearch.client</groupId><br>
+<artifactId>elasticsearch-rest-high-level-client</artifactId><br>
+<version>7.17.3</version><br>
+</dependency></p>
+</li>
+</ol>
+<p>第二步：在 src/test/java/cn/itcast/hotel/HotelIndexTest.java 创建测试类：<br>
+package cn.itcast.hotel;</p>
+<p>import org.apache.http.HttpHost;<br>
+import org.elasticsearch.client.RestClient;<br>
+import org.elasticsearch.client.RestHighLevelClient;<br>
+import org.junit.jupiter.api.AfterEach;<br>
+import org.junit.jupiter.api.BeforeEach;<br>
+import org.junit.jupiter.api.Test;</p>
+<p>public class HotelIndexTest {<br>
+private RestHighLevelClient client;</p>
+<pre><code>@BeforeEach
+void setUp() {
+    this.client = new RestHighLevelClient(
+        RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200, &quot;http&quot;))
+    );
+}
+
+@AfterEach
+void tearDown() throws Exception {
+    this.client.close();
+}
+
+@Test
+void testInit() {
+    System.out.println(client);
+}
+</code></pre>
+<p>}<br>
+第三步：确保以下服务在 CentOS 7 上运行：<br>
+● Elasticsearch（端口 9200）<br>
+● MySQL（端口 3306）<br>
+● （可选）Kibana（端口 5601）<br>
+第四步：运行 testInit 方法，验证 RestClient 初始化成功。</p>
+<ol start="4">
+<li>创建索引库<br>
+第一步：在 src/main/java/cn/itcast/hotel/constants/HotelConstants.java 定义 DSL 语句：<br>
+package cn.itcast.hotel.constants;</li>
+</ol>
+<p>public class HotelConstants {<br>
+public static final String MAPPING_TEMPLATE = &quot;{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;id&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; },<br>
+&quot;brand&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;address&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; },<br>
+&quot;price&quot;： { &quot;type&quot;： &quot;double&quot; },<br>
+&quot;star&quot;： { &quot;type&quot;： &quot;integer&quot; },<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;location&quot;： { &quot;type&quot;： &quot;geo_point&quot; }<br>
+}<br>
+}<br>
+}&quot;;<br>
+}<br>
+第二步：在 HotelIndexTest.java 添加创建索引方法：<br>
+@Test<br>
+void createHotelIndex() throws IOException {<br>
+CreateIndexRequest request = new CreateIndexRequest(&quot;gghotel&quot;);<br>
+request.source(HotelConstants.MAPPING_TEMPLATE, XContentType.JSON);<br>
+client.indices().create(request, RequestOptions.DEFAULT);<br>
+}<br>
+第三步：确保 Elasticsearch 在 CentOS 7 上运行。<br>
+第四步：运行 createHotelIndex 方法，创建 gghotel 索引。<br>
+第五步：通过 Kibana 验证索引是否存在：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 在 Dev Tools 输入：<br>
+GET /_cat/indices/gghotel?v</p>
+<ol start="5">
+<li>
+<p>删除和判断索引库</p>
+</li>
+<li>
+<p>删除索引库<br>
+在 HotelIndexTest.java 添加：<br>
+@Test<br>
+void testDeleteHotelIndex() throws IOException {<br>
+DeleteIndexRequest request = new DeleteIndexRequest(&quot;gghotel&quot;);<br>
+client.indices().delete(request, RequestOptions.DEFAULT);<br>
+}<br>
+运行 testDeleteHotelIndex 方法，删除 gghotel 索引。</p>
+</li>
+<li>
+<p>判断索引库是否存在<br>
+在 HotelIndexTest.java 添加：<br>
+@Test<br>
+void testExistsHotelIndex() throws IOException {<br>
+ExistsRequest request = new ExistsRequest(&quot;gghotel&quot;);<br>
+boolean exists = client.indices().exists(request, RequestOptions.DEFAULT);<br>
+System.out.println(exists ? &quot;索引库存在&quot; ： &quot;索引库不存在&quot;);<br>
+}<br>
+运行 testExistsHotelIndex 方法，检查 gghotel 索引是否存在。</p>
+</li>
+<li>
+<p>新增文档<br>
+● Hotel.java（pojo 目录，数据库交互）：<br>
+package cn.itcast.hotel.pojo;</p>
+</li>
+</ol>
+<p>import lombok.Data;</p>
+<p>@Data<br>
+public class Hotel {<br>
+private Long id;<br>
+private String name;<br>
+private String brand;<br>
+private String address;<br>
+private Double price;<br>
+private Integer star;<br>
+private String city;<br>
+private Double latitude;<br>
+private Double longitude;<br>
+}<br>
+● HotelDoc.java（pojo 目录，ES 交互）：<br>
+package cn.itcast.hotel.pojo;</p>
+<p>import lombok.Data;</p>
+<p>@Data<br>
+public class HotelDoc {<br>
+private Long id;<br>
+private String name;<br>
+private String brand;<br>
+private String address;<br>
+private Double price;<br>
+private Integer star;<br>
+private String city;<br>
+private Map&lt;String, Double&gt; location; // { &quot;lat&quot;： 纬度, &quot;lon&quot;： 经度 }</p>
+<pre><code>public HotelDoc(Hotel hotel) {
+    this.id = hotel.getId();
+    this.name = hotel.getName();
+    this.brand = hotel.getBrand();
+    this.address = hotel.getAddress();
+    this.price = hotel.getPrice();
+    this.star = hotel.getStar();
+    this.city = hotel.getCity();
+    this.location = new HashMap&lt;&gt;();
+    this.location.put(&quot;lat&quot;, hotel.getLatitude());
+    this.location.put(&quot;lon&quot;, hotel.getLongitude());
+}
+</code></pre>
+<p>}<br>
+● IHotelService.java（service 目录）：<br>
+public interface IHotelService extends IService<Hotel> {<br>
+}<br>
+● HotelService.java（service/impl 目录）：实现 IHotelService，使用 MyBatis-Plus 查询数据库。<br>
+具体操作：<br>
+第一步：在 src/test/java/cn/itcast/hotel/HotelDocumentTest.java 创建测试类：<br>
+package cn.itcast.hotel;</p>
+<p>import cn.itcast.hotel.pojo.Hotel;<br>
+import cn.itcast.hotel.pojo.HotelDoc;<br>
+import cn.itcast.hotel.service.IHotelService;<br>
+import com.fasterxml.jackson.databind.ObjectMapper;<br>
+import org.elasticsearch.action.index.IndexRequest;<br>
+import org.elasticsearch.client.RequestOptions;<br>
+import org.elasticsearch.client.RestHighLevelClient;<br>
+import org.elasticsearch.common.xcontent.XContentType;<br>
+import org.junit.jupiter.api.AfterEach;<br>
+import org.junit.jupiter.api.BeforeEach;<br>
+import org.junit.jupiter.api.Test;<br>
+import org.springframework.beans.factory.annotation.Autowired;<br>
+import org.springframework.boot.test.context.SpringBootTest;</p>
+<p>@SpringBootTest<br>
+public class HotelDocumentTest {<br>
+@Autowired<br>
+private RestHighLevelClient client;<br>
+@Autowired<br>
+private IHotelService hotelService;</p>
+<pre><code>private final ObjectMapper mapper = new ObjectMapper();
+
+@BeforeEach
+void setUp() {
+    this.client = new RestHighLevelClient(
+        RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200, &quot;http&quot;))
+    );
+}
+
+@AfterEach
+void tearDown() throws Exception {
+    this.client.close();
+}
+
+@Test
+void testAddDocument() throws IOException {
+    Hotel hotel = hotelService.getById(61083L);
+    HotelDoc hotelDoc = new HotelDoc(hotel);
+    IndexRequest request = new IndexRequest(&quot;gghotel&quot;).id(hotelDoc.getId().toString());
+    request.source(mapper.writeValueAsString(hotelDoc), XContentType.JSON);
+    client.index(request, RequestOptions.DEFAULT);
+}
+</code></pre>
+<p>}<br>
+第二步：运行 testAddDocument，将 ID 为 61083 的酒店数据导入 gghotel 索引。<br>
+第三步：通过 Kibana 验证：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 输入：<br>
+GET /gghotel/_doc/61083</p>
+<ol start="7">
+<li>
+<p>查询文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testGetDocumentById() throws IOException {<br>
+GetRequest request = new GetRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+GetResponse response = client.get(request, RequestOptions.DEFAULT);<br>
+if (response.isExists()) {<br>
+HotelDoc hotelDoc = mapper.readValue(response.getSourceAsString(), HotelDoc.class);<br>
+System.out.println(hotelDoc);<br>
+} else {<br>
+System.out.println(&quot;文档不存在&quot;);<br>
+}<br>
+}<br>
+第二步：运行 testGetDocumentById，查询 ID 为 61083 的文档并反序列化为 HotelDoc 对象。</p>
+</li>
+<li>
+<p>修改文档<br>
+第一步：在 HotelDocumentTest.java 添加增量修改：<br>
+@Test<br>
+void testUpdateDocument() throws IOException {<br>
+UpdateRequest request = new UpdateRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();<br>
+map.put(&quot;price&quot;, 888.88); // 仅修改价格<br>
+request.doc(map);<br>
+client.update(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testGetDocumentById，查看 ID 为 61083 的文档原始数据。<br>
+第三步：运行 testUpdateDocument，修改价格。<br>
+第四步：再次运行 testGetDocumentById，验证价格是否改为 888.88。<br>
+注意：<br>
+● 增量修改只更新指定字段（如 price），其他字段不变。<br>
+● 如果文档不存在，会变为新增（需确保 mapping 支持新字段）。</p>
+</li>
+<li>
+<p>删除文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testDeleteDocument() throws IOException {<br>
+DeleteRequest request = new DeleteRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+client.delete(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testGetDocumentById，确认 ID 为 61083 的文档存在。<br>
+第三步：运行 testDeleteDocument，删除 ID 为 61083 的文档。<br>
+第四步：再次运行 testGetDocumentById，验证文档是否已删除（应返回“文档不存在”）。</p>
+</li>
+<li>
+<p>批量导入文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testBulkRequest() throws IOException {<br>
+List<Hotel> hotels = hotelService.list();<br>
+BulkRequest request = new BulkRequest();<br>
+for (Hotel hotel ： hotels) {<br>
+HotelDoc hotelDoc = new HotelDoc(hotel);<br>
+request.add(new IndexRequest(&quot;gghotel&quot;)<br>
+.id(hotelDoc.getId().toString())<br>
+.source(mapper.writeValueAsString(hotelDoc), XContentType.JSON));<br>
+}<br>
+client.bulk(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testBulkRequest，将 MySQL 中所有酒店数据批量导入 gghotel 索引。<br>
+第三步：通过 Kibana 验证：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 输入：<br>
+GET /gghotel/_search<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match_all&quot;： {}<br>
+}<br>
+}</p>
+</li>
+</ol>
+<h1 id="es-dsl查询文档">ES-DSL查询文档</h1>
+<p>官方文档： Elasticsearch Query DSL<br>
+一、查询类型概览</p>
+<ol>
+<li>
+<p>查询所有（match_all）<br>
+● 查询所有文档，一般用于测试或初步查看数据结构。<br>
+● 示例：<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match_all&quot;： {}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>全文检索查询（Full Text Queries）<br>
+2.1 match 查询<br>
+● 对输入进行分词，再匹配倒排索引。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;xxALL&quot;： &quot;如家&quot;<br>
+}<br>
+}<br>
+}<br>
+2.2 multi_match 查询<br>
+● 可同时匹配多个字段。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;multi_match&quot;： {<br>
+&quot;query&quot;： &quot;如家&quot;,<br>
+&quot;fields&quot;： [&quot;name&quot;, &quot;brand&quot;, &quot;business&quot;]<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>精确查询（Term-level Queries）<br>
+3.1 term 查询<br>
+● 不分词，直接匹配 keyword、数值、布尔值、日期字段等。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;term&quot;： {<br>
+&quot;city&quot;： &quot;上海&quot;<br>
+}<br>
+}<br>
+}<br>
+3.2 range 查询<br>
+● 范围匹配<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;range&quot;： {<br>
+&quot;price&quot;： {<br>
+&quot;gte&quot;： 200,<br>
+&quot;lte&quot;： 300<br>
+}<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>地理位置查询（Geo Queries）<br>
+geo_distance 查询<br>
+● 基于经纬度查找一定范围内的数据。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;geo_distance&quot;： {<br>
+&quot;distance&quot;： &quot;15km&quot;,<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 31.25,<br>
+&quot;lon&quot;： 121.5<br>
+}<br>
+}<br>
+}<br>
+}<br>
+geo_bounding_box 查询<br>
+● 查询geo_point值落在某个矩形范围的所有文档，用两个点来围成的矩形范围<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;geo_bounding_box&quot;： {<br>
+&quot;字段名&quot;: {<br>
+&quot;top_left&quot;: {<br>
+&quot;lat&quot;: 31.1,<br>
+&quot;lon&quot;: 121.5<br>
+},<br>
+&quot;bottom_right&quot;: {<br>
+&quot;lat&quot;: 30.9,<br>
+&quot;lon&quot;: 121.7<br>
+}<br>
+}<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>复合查询（Compound Queries）<br>
+5.1 function_score 查询<br>
+● 控制文档得分以影响排名。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;function_score&quot;： {<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;name&quot;： &quot;如家&quot;<br>
+}<br>
+},<br>
+&quot;functions&quot;： [<br>
+{<br>
+&quot;filter&quot;： { &quot;term&quot;： { &quot;city&quot;： &quot;北京&quot; } },<br>
+&quot;weight&quot;： 5<br>
+}<br>
+]<br>
+}<br>
+}<br>
+}<br>
+5.2 bool 查询<br>
+● 布尔组合查询（must/should/must_not/filter）<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;bool&quot;： {<br>
+&quot;must&quot;： [<br>
+{ &quot;match&quot;： { &quot;name&quot;： &quot;如家&quot; } }<br>
+],<br>
+&quot;filter&quot;： [<br>
+{ &quot;range&quot;： { &quot;price&quot;： { &quot;lte&quot;： 400 } } },<br>
+{<br>
+&quot;geo_distance&quot;： {<br>
+&quot;distance&quot;： &quot;10km&quot;,<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 31.21,<br>
+&quot;lon&quot;： 121.5<br>
+}<br>
+}<br>
+}<br>
+]<br>
+}<br>
+}<br>
+}</p>
+</li>
+</ol>
+<p>二、搜索结果处理</p>
+<ol>
+<li>排序（sort）<br>
+● 支持按 keyword、数值、地理位置、日期排序。<br>
+{<br>
+&quot;sort&quot;： [<br>
+{ &quot;_score&quot;： &quot;desc&quot; },<br>
+{ &quot;price&quot;： &quot;asc&quot; }<br>
+]<br>
+}<br>
+地理排序示例：<br>
+{<br>
+&quot;sort&quot;： [<br>
+{<br>
+&quot;_geo_distance&quot;： {<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 28.28811,<br>
+&quot;lon&quot;： 121.66053<br>
+},<br>
+&quot;order&quot;： &quot;asc&quot;,<br>
+&quot;unit&quot;： &quot;km&quot;<br>
+}<br>
+}<br>
+]<br>
+}</li>
+<li>分页（from + size）<br>
+{<br>
+&quot;from&quot;： 100,<br>
+&quot;size&quot;： 20,<br>
+&quot;query&quot;： { ... },<br>
+&quot;sort&quot;： [ { &quot;price&quot;： &quot;asc&quot; } ]<br>
+}<br>
+深度分页解决方案<br>
+● search_after：基于上次排序值翻页（只能向后翻）<br>
+● scroll：快照分页（内存消耗大，不实时，已不推荐）</li>
+<li>高亮显示（highlight）<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;name&quot;： &quot;如家&quot;<br>
+}<br>
+},<br>
+&quot;highlight&quot;： {<br>
+&quot;fields&quot;： {<br>
+&quot;name&quot;： {}<br>
+}<br>
+}<br>
+}</li>
+</ol>
+<p>三、总结<br>
+● 查询类型：match、multi_match、term、range、geo_distance、function_score、bool<br>
+● 结果处理：排序、分页、高亮<br>
+● 深度分页推荐使用 search_after<br>
+● 可通过 _score 或 weight 控制相关性排名</p>
+<h1 id="es-restclient查询文档">ES-RestClient查询文档</h1>
+<ol>
+<li>
+<p>match_all 查询（基础查询）<br>
+● 创建连接客户端：<br>
+RestClient restClient = RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200)).build();<br>
+ElasticsearchClient client = new ElasticsearchClient(new RestClientTransport(restClient, new JacksonJsonpMapper()));<br>
+● 执行 match_all 查询：<br>
+SearchResponse<HotelDoc> response = client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.matchAll(m -&gt; m)),<br>
+HotelDoc.class<br>
+);<br>
+● 解析结果：<br>
+List<HotelDoc> hotels = response.hits().hits().stream()<br>
+.map(Hit：：source)<br>
+.collect(Collectors.toList());</p>
+</li>
+<li>
+<p>match 查询 / multi_match 查询<br>
+● match（单字段）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.match(m -&gt; m.field(&quot;name&quot;).query(&quot;如家&quot;))),<br>
+HotelDoc.class<br>
+);<br>
+● multi_match（多字段）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.multiMatch(m -&gt; m<br>
+.query(&quot;如家&quot;)<br>
+.fields(&quot;name&quot;, &quot;brand&quot;, &quot;business&quot;))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>提取解析逻辑（通用解析）<br>
+● 封装解析函数：<br>
+private List<HotelDoc> parse(SearchResponse<HotelDoc> response) {<br>
+return response.hits().hits().stream()<br>
+.map(Hit：：source)<br>
+.collect(Collectors.toList());<br>
+}<br>
+● 调用方式：<br>
+var result = parse(response);</p>
+</li>
+<li>
+<p>精确查询：term / range<br>
+● term 查询（不分词）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.term(t -&gt; t.field(&quot;city&quot;).value(v -&gt; v.stringValue(&quot;北京&quot;)))),<br>
+HotelDoc.class<br>
+);<br>
+● range 查询（大于/小于）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.range(r -&gt; r<br>
+.field(&quot;price&quot;)<br>
+.gte(JsonData.of(200))<br>
+.lte(JsonData.of(500)))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>布尔查询（bool）<br>
+● 组合 must + filter：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.bool(b -&gt; b<br>
+.must(m -&gt; m.term(t -&gt; t.field(&quot;city&quot;).value(v -&gt; v.stringValue(&quot;上海&quot;))))<br>
+.filter(f -&gt; f.range(r -&gt; r.field(&quot;price&quot;).lte(JsonData.of(300))))<br>
+)),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>地理位置查询（geo_distance）<br>
+● 查询附近的酒店：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.geoDistance(g -&gt; g<br>
+.field(&quot;location&quot;)<br>
+.distance(&quot;5km&quot;)<br>
+.location(loc -&gt; loc.latlon(ll -&gt; ll.lat(31.21).lon(121.5)))<br>
+)),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>排序与分页<br>
+● 分页：<br>
+.from(0)<br>
+.size(10)<br>
+● 排序：<br>
+.sort(sort -&gt; sort.field(f -&gt; f<br>
+.field(&quot;price&quot;)<br>
+.order(SortOrder.Asc)))<br>
+● 完整组合查询：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.matchAll(m -&gt; m))<br>
+.from(0)<br>
+.size(10)<br>
+.sort(st -&gt; st.field(f -&gt; f.field(&quot;price&quot;).order(SortOrder.Asc))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>高亮显示<br>
+● 设置高亮字段：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.match(m -&gt; m.field(&quot;name&quot;).query(&quot;如家&quot;)))<br>
+.highlight(h -&gt; h<br>
+.fields(&quot;name&quot;, f -&gt; f<br>
+.preTags(&quot;<em>&quot;)<br>
+.postTags(&quot;</em>&quot;)<br>
+)<br>
+),<br>
+HotelDoc.class<br>
+);<br>
+● 解析高亮内容：<br>
+for (Hit<HotelDoc> hit ： response.hits().hits()) {<br>
+HotelDoc doc = hit.source();<br>
+Map&lt;String, List<String>&gt; highlight = hit.highlight();<br>
+if (highlight != null &amp;&amp; highlight.containsKey(&quot;name&quot;)) {<br>
+doc.setName(highlight.get(&quot;name&quot;).get(0));<br>
+}<br>
+}<br>
+● 所有查询的构建入口都是 .query(q -&gt; q.xxx(...))，所有构造器都是 Lambda 风格链式调用。<br>
+● 所有字段建议使用 .field(&quot;xxx&quot;) 而不是静态常量，避免错误。<br>
+● JsonData.of(...) 用于传入通用数据，比如整数、布尔、字符串等。<br>
+● client.search(...) 的第二个参数必须是泛型，表示返回对象类型。</p>
+</li>
+</ol>
+<h1 id="es-es集群">ES-es集群</h1>
+<ol>
+<li>
+<p>集群核心概念补充<br>
+● 集群（Cluster）：由多个节点（Node）组成，对外表现为一个统一的搜索与索引服务。<br>
+● 节点（Node）：运行 Elasticsearch 的实例，每个节点有唯一名称。<br>
+● 索引（Index）：类似关系型数据库中的表，是逻辑上的文档集合。<br>
+● 文档（Document）：数据记录的最小单位，类似关系型数据库中的一行数据。<br>
+● 分片（Shard）：ES 为了实现横向扩展将一个索引的数据分成若干物理单元，每个分片可以独立存储、查询。</p>
+</li>
+<li>
+<p>节点角色详解<br>
+节点角色	配置项	说明<br>
+Master	node.master=true	负责集群管理（元数据、分片分配等），一个集群只能有一个主节点。<br>
+Data	node.data=true	存储数据，执行实际的 CRUD、搜索和聚合操作。<br>
+Ingest	node.ingest=true	负责预处理文档，如管道处理、日志解析等。<br>
+Coordinating	所有为 false	请求协调节点，不存储数据、不选主，负责接收请求并分发到数据节点。<br>
+建议：部署集群时，建议分离 Master 和 Data 节点，保证主节点稳定性。</p>
+</li>
+<li>
+<p>分片与副本机制深入理解<br>
+● 主分片（Primary Shard）：写入数据的起点，每条数据只会进入一个主分片。<br>
+● 副本分片（Replica Shard）：主分片的备份，不直接写入，但可读取。<br>
+● 分片分配公式：<br>
+shard = hash(_id) % number_of_primary_shards<br>
+● 副本作用：<br>
+○ 提升查询能力（副本也能查询）。<br>
+○ 宕机时提供容错（主分片宕机，副本可晋升为主分片）。</p>
+</li>
+<li>
+<p>分片分配过程细节<br>
+新增文档流程（简化）：</p>
+</li>
+<li>
+<p>请求到达协调节点。</p>
+</li>
+<li>
+<p>协调节点根据 _id 和主分片数选择目标主分片。</p>
+</li>
+<li>
+<p>将写请求转发到主分片所在节点。</p>
+</li>
+<li>
+<p>主分片写成功后同步给所有副本分片。<br>
+查询文档流程：</p>
+</li>
+<li>
+<p>请求到协调节点。</p>
+</li>
+<li>
+<p>协调节点将查询请求转发给所有分片（主或副本均可）。</p>
+</li>
+<li>
+<p>汇总返回结果并排序分页，返回给用户。</p>
+</li>
+<li>
+<p>故障转移与数据恢复机制<br>
+● Master 节点负责监控整个集群的健康状态。<br>
+● 当某个节点宕机后，主节点会重新分配分片副本，确保数据不丢失。<br>
+● 副本晋升机制：如果主分片不可用，副本自动晋升为新的主分片。<br>
+● 节点恢复后，主节点会尝试将原分片再迁回恢复节点（若配置允许）。<br>
+温馨提示：在生产环境下，推荐设置副本数至少为 1，确保高可用。</p>
+</li>
+<li>
+<p>避免脑裂和主节点选举机制<br>
+● 脑裂现象：网络异常或主节点宕机，多个候选节点各自认为自己是主节点，造成集群状态不一致。<br>
+● 选举机制（Zen Discovery）：<br>
+○ 需要超过半数候选节点的选票才能成为主节点。<br>
+○ 最好使用奇数个 master-eligible 节点（如 3 个），避免 50% 投票僵局。<br>
+● ES 7.0 以后：<br>
+○ 自动启用了基于 quorum（多数派）的主节点选举策略。<br>
+○ 不再手动设置 discovery.zen.minimum_master_nodes。</p>
+</li>
+<li>
+<p>Cerebro 工具优势总结<br>
+● 类似于 Kibana 的集群可视化管理工具。<br>
+● 可监控节点健康、分片状态、磁盘使用率等。<br>
+● 支持直接执行 DSL（但不支持复杂图表或 Kibana 的监控分析功能）。</p>
+</li>
+<li>
+<p>集群部署建议<br>
+● 生产集群一般配置建议：<br>
+○ 3 个 Master-eligible 节点（防止脑裂）。<br>
+○ 2-3 个 Data 节点（根据存储和查询压力增减）。<br>
+○ 分离 master 和 data 节点，避免角色冲突。<br>
+○ 使用外置的协调节点处理所有查询/写入请求，避免 master 过载。<br>
+● 磁盘容量规划：<br>
+○ 单节点使用磁盘最好不超过 70%，留有空间给 shard 迁移。</p>
+</li>
+</ol>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://shengwei42.github.io/post/she-ji-mo-shi/">
+                  <h3 class="post-title">
+                    设计模式
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

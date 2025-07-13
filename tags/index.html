@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" >
+
+<title>关于我 | shengwei的个人博客</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://shengwei42.github.io/favicon.ico?v=1752389319188">
+<link rel="stylesheet" href="https://shengwei42.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="一个记录日常学习笔记的博客网站">
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://shengwei42.github.io">
+        <img src="https://shengwei42.github.io/images/avatar.png?v=1752389319188" class="site-logo">
+        <h1 class="site-title">shengwei的个人博客</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/tags" class="site-nav">
+            关于我
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      一个记录日常学习笔记的博客网站
+    </div>
+    <div class="site-footer">
+      联系：zhoushengwei42@gmail.com
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="about-content" style="text-align: left; padding: 20px;">
+            <p style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">一名来自上海海洋大学软件工程的大学生，热爱编程，热爱算法，热爱打乒乓球，热爱打皇室战争。</p>
+            <p style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">希望通过这个博客，能够与大家分享我的学习心得和生活点滴，也期待与志同道合的朋友们交流和探讨。</p>
+            <p style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">联系：zhoushengwei42@gmail.com</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

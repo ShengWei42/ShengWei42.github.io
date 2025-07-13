@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Spring | shengwei的个人博客</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://shengwei42.github.io/favicon.ico?v=1752389319188">
+<link rel="stylesheet" href="https://shengwei42.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="Spring 框架介绍
+Spring 是一款开源的轻量级 Java 开发框架，旨在提高开发人员的开发效率以及系统的可维护性。
+我们一般说 Spring 框架指的都是 Spring Framework，它是很多模块的集合，使用这些模块可以很方..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://shengwei42.github.io">
+        <img src="https://shengwei42.github.io/images/avatar.png?v=1752389319188" class="site-logo">
+        <h1 class="site-title">shengwei的个人博客</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/tags" class="site-nav">
+            关于我
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      一个记录日常学习笔记的博客网站
+    </div>
+    <div class="site-footer">
+      联系：zhoushengwei42@gmail.com
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Spring</h2>
+            <div class="post-date">2025-02-26</div>
+            
+            <div class="post-content" v-pre>
+              <h1 id="spring-框架介绍">Spring 框架介绍</h1>
+<p>Spring 是一款开源的轻量级 Java 开发框架，旨在提高开发人员的开发效率以及系统的可维护性。</p>
+<p>我们一般说 Spring 框架指的都是 Spring Framework，它是很多模块的集合，使用这些模块可以很方便地协助我们进行开发，比如说 Spring 支持 IoC 和 AOP、可以很方便地对数据库进行访问、可以很方便地集成第三方组件（电子邮件，定时任务，缓存等等）、对单元测试支持比较好、支持 RESTful Java 应用程序的开发。</p>
+<h1 id="spring主要模块">Spring主要模块</h1>
+<p>Spring 框架主要包含以下几个核心模块：</p>
+<ol>
+<li><strong>Spring Core Container (核心容器)</strong>:
+<ul>
+<li><strong>Spring Core</strong>: 提供了框架的基础功能，包括依赖注入（DI）和控制反转（IoC）。</li>
+<li><strong>Spring Beans</strong>: 支持Spring的bean工厂，即DI容器，用于管理应用程序中的对象。</li>
+<li><strong>Spring Context</strong>: 基于核心模块，提供了一个框架来访问Spring的配置。<code>ApplicationContext</code>是最常用的接口之一。</li>
+<li><strong>Spring Expression Language (SpEL)</strong>: 用于在运行时查询和操作对象图。</li>
+</ul>
+</li>
+<li><strong>Data Access/Integration (数据访问/集成)</strong>:
+<ul>
+<li><strong>Spring JDBC</strong>: 简化了对JDBC的使用，使得数据库操作更加方便。</li>
+<li><strong>Spring ORM</strong>: 提供与ORM工具（如Hibernate、JPA等）的集成。</li>
+<li><strong>Spring OXM (Object/XML Mapping)</strong>: 支持对象与XML的映射。</li>
+<li><strong>Spring JMS</strong>: 提供消息服务的集成支持。</li>
+<li><strong>Spring Transaction</strong>: 提供统一的事务管理服务。</li>
+</ul>
+</li>
+<li><strong>Spring Web (Web相关)</strong>:
+<ul>
+<li><strong>Spring Web</strong>: 支持创建Web应用程序，包括Spring MVC。</li>
+<li><strong>Spring WebFlux</strong>: 支持响应式编程，基于Reactive Streams标准。</li>
+<li><strong>Spring WebSocket</strong>: 提供WebSocket的支持，使得可以在Web应用中进行双向通信。</li>
+</ul>
+</li>
+<li><strong>AOP (面向切面编程)</strong>:
+<ul>
+<li><strong>Spring AOP</strong>: 提供了对面向切面编程的支持，使得可以在不修改代码的情况下添加行为（如日志记录、事务管理等）。</li>
+<li><strong>Spring Aspects</strong>: 提供了对AspectJ的集成支持。</li>
+</ul>
+</li>
+<li><strong>Test (测试)</strong>:
+<ul>
+<li>提供了对单元测试和集成测试的支持，包括对JUnit、TestNG的集成。</li>
+</ul>
+</li>
+</ol>
+<p>这些模块相互配合，为开发者提供了一个强大且灵活的开发框架，可以用于构建各种类型的Java应用程序。</p>
+<h1 id="ioc-和-di">IoC 和 DI</h1>
+<ol>
+<li><strong>控制反转（IoC）</strong> 是一种设计原则，用于将对象创建和依赖关系的管理权从应用程序代码中移交给外部容器或框架。在传统的编程模型中，应用程序代码通常直接创建和管理对象及其依赖关系，这意味着应用程序对具体的实现有很强的控制权。然而，这种方式可能导致代码的耦合性较高，难以测试和维护。<br>
+IoC 的核心思想是将这种控制权“反转”给一个 IoC 容器，由容器来管理对象的生命周期和依赖关系。这样，应用程序只需声明需要的依赖，具体的实现和依赖的注入由容器负责处理。<br>
+在 Spring 中，<strong>IoC 容器</strong>是通过 <code>ApplicationContext</code> 或 <code>BeanFactory</code> 来实现的。开发者只需在配置文件或注解中定义 Bean 及其依赖，Spring IoC 容器会自动解析并注入这些依赖，从而简化了代码结构。</li>
+<li><strong>依赖注入（DI）</strong> 是 IoC 的一种实现方式。它指的是在运行时，由容器负责将对象所依赖的其他对象传递给它，而不是由对象自己去创建或查找依赖项。DI 可以通过构造器注入、Setter 方法注入或者基于注解注入的方式实现。</li>
+</ol>
+<h1 id="ioc-实现机制">IoC 实现机制</h1>
+<p>Spring 的 IoC 本质就是一个大工厂，而一个工厂，至少需要最基本三个条件：</p>
+<ul>
+<li><strong>生产产品</strong>：一个工厂最核心的功能就是生产产品。在 Spring 里，不用 Bean 自己来实例化，而是交给 Spring而实现的方式就是<strong>反射</strong>。而生产管理的模式就是——<strong>工厂模式</strong>。</li>
+<li><strong>库存产品</strong>：工厂一般都是有库房的，用来库存产品，毕竟生产的产品不能立马就拉走。Spring 本身就是一个容器，这个容器里存的就是对象，Spring会提前创建对象，再把创建出的对象存起来。</li>
+<li><strong>订单处理</strong>：还有最重要的一点，工厂根据什么来提供产品呢？订单。在 Spring 里，也有这样的订单，它就是我们 bean 的定义和依赖关系，可以是 xml 形式，也可以是我们最熟悉的注解形式。</li>
+</ul>
+<h1 id="aop">AOP</h1>
+<p>AOP，也就是面向切面编程，是 Spring 中最重要的核心概念之一。简单点说，AOP 就是把一些业务逻辑中的相同代码抽取到一个独立的模块中，让业务逻辑更加清爽。举个例子，假如我们现在需要在业务代码开始前进行参数校验，在结束后打印日志，该怎么办呢？我们可以把日志记录和数据校验这两个功能抽取出来，形成一个切面，然后在业务代码中引入这个切面，这样就可以实现业务逻辑和通用逻辑的分离。业务代码不再关心这些通用逻辑，只需要关心自己的业务实现，这样就实现了业务逻辑和通用逻辑的分离。</p>
+<p><strong>AOP 核心概念：</strong></p>
+<ul>
+<li>切面（Aspect）：切面是 AOP 的核心模块，它封装了某个横切关注点的逻辑。一个切面通常包含在特定连接点执行的逻辑，比如日志记录、事务管理等。</li>
+<li>连接点（Join Point）：被拦截到的点，一般连接点指的是被拦截到的方法，实际上连接点还可以是字段或者构造方法。</li>
+<li>切点（Pointcut）：对连接点进行拦截的定位</li>
+<li>通知（Advice）：指拦截到连接点之后要执行的代码，也可以称作增强</li>
+<li>代理（Proxy）：AOP框架向目标对象应用通知之后创建的代理对象。Spring AOP 使用 JDK 动态代理或 CGLIB 生成代理对象。</li>
+<li>目标对象 （Target）：代理的目标对象</li>
+<li>织入（Weabing）：织入是将切面应用到目标对象的过程。</li>
+</ul>
+<p><strong>Aop的五种通知类型：</strong></p>
+<p>AOP 一般有 5 种环绕方式：</p>
+<ul>
+<li>前置通知 (@Before)</li>
+<li>返回通知 (@AfterReturning)</li>
+<li>异常通知 (@AfterThrowing)</li>
+<li>后置通知 (@After)</li>
+<li>环绕通知 (@Around)</li>
+</ul>
+<h1 id="spring-事务种类">Spring 事务种类</h1>
+<p>Spring 事务的本质其实就是数据库对事务的支持，没有数据库的事务支持，Spring 是无法提供事务功能的。Spring 只提供统一事务管理接口，具体实现都是由各数据库自己实现，数据库事务的提交和回滚是通过数据库自己的事务机制实现。</p>
+<p>在 Spring 中，事务管理可以分为两大类：声明式事务管理和编程式事务管理。</p>
+<p><strong>编程式事务</strong>：在代码中硬编码(在分布式系统中推荐使用) : 通过 <code>TransactionTemplate</code>或者 <code>TransactionManager</code> 手动管理事务。</p>
+<p><strong>声明式事务</strong>：在 XML 配置文件中配置或者直接基于注解（单体应用或者简单业务系统推荐使用） : 实际是通过 AOP 实现（基于<code>@Transactional</code> 的全注解方式使用最多</p>
+<p><strong>两者的区别</strong></p>
+<ul>
+<li><strong>编程式事务管理</strong>：需要在代码中显式调用事务管理的 API 来控制事务的边界，比较灵活，但是代码侵入性较强，不够优雅。</li>
+<li><strong>声明式事务管理</strong>：这种方式使用 Spring 的 AOP 来声明事务，将事务管理代码从业务代码中分离出来。优点是代码简洁，易于维护。但缺点是不够灵活，只能在预定义的方法上使用事务。</li>
+</ul>
+<h1 id="spring-的事务传播机制">Spring 的事务传播机制</h1>
+<p>事务传播行为定义了多个事务方法相互调用时事务的传播方式。Spring 支持多种传播行为，通过 <code>@Transactional</code> 注解的 <code>propagation</code> 属性来配置：</p>
+<ul>
+<li><strong>REQUIRED</strong>: 默认传播行为，如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务。</li>
+<li><strong>REQUIRES_NEW</strong>: 总是创建一个新的事务，如果当前存在事务，则将当前事务挂起。</li>
+<li><strong>SUPPORTS</strong>: 如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行。</li>
+<li><strong>NOT_SUPPORTED</strong>: 以非事务方式执行，如果当前存在事务，则将当前事务挂起。</li>
+<li><strong>MANDATORY</strong>: 必须在一个已存在的事务中运行，如果当前没有事务，则抛出异常。</li>
+<li><strong>NEVER</strong>: 以非事务方式执行，如果当前存在事务，则抛出异常。</li>
+<li><strong>NESTED</strong>: 如果当前存在事务，则在当前事务中创建一个子事务（嵌套事务）；如果当前没有事务，则与 <code>REQUIRED</code> 行为相同，创建一个新的事务。</li>
+</ul>
+<h1 id="声明式事务失效">声明式事务失效</h1>
+<ol>
+<li>
+<p><strong>@Transactional 应用在非 public 修饰的方法上</strong><br>
+如果 Transactional 注解应用在非 public 修饰的方法上，Transactional 将会失效。</p>
+</li>
+<li>
+<p><strong>@Transactional 注解属性 propagation 设置错误</strong></p>
+<ul>
+<li>supports：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行；错误使用场景：在业务逻辑必须运行在事务环境下以确保数据一致性的情况下使用 SUPPORTS。</li>
+<li>not_supported：总是以非事务方式执行，如果当前存在事务，则挂起该事务。错误使用场景：在需要事务支持的操作中使用 NOT_SUPPORTED。</li>
+<li>never：总是以非事务方式执行，如果当前存在事务，则抛出异常。错误使用场景：在应该在事务环境下执行的操作中使用 NEVER。</li>
+</ul>
+</li>
+<li>
+<p><strong>异常未被捕获或异常类型不匹配</strong></p>
+<ul>
+<li>默认情况下，Spring 事务管理器只会在未捕获的运行时异常（<code>RuntimeException</code>）或错误（<code>Error</code>）抛出时回滚事务。如果方法抛出的是一个检查型异常（<code>Checked Exception</code>），而且 <code>@Transactional</code> 没有显式指定回滚策略，事务将不会回滚。</li>
+<li>解决方法：使用 <code>rollbackFor</code> 属性来指定要回滚的异常类型，</li>
+</ul>
+</li>
+<li>
+<p><strong>同类内部方法调用</strong></p>
+<ul>
+<li>当一个类的方法调用另一个同类的 <code>@Transactional</code> 注解的方法时，事务不会生效。这是因为 Spring 的 AOP 代理无法拦截同一类中的自调用。</li>
+<li>例如，假设 <code>methodA()</code> 是一个没有事务的公共方法，而 <code>methodB()</code> 是一个带有 <code>@Transactional</code> 注解的方法。如果 <code>methodA()</code> 在同一个类中调用 <code>methodB()</code>，事务不会生效。</li>
+<li>解决方法：将事务逻辑提取到一个单独的服务类中，或者使用 <code>AopContext.currentProxy()</code> 来调用代理对象的方法。</li>
+</ul>
+</li>
+</ol>
+<h1 id="spring-mvc-的核心组件">Spring MVC 的核心组件</h1>
+<ol>
+<li><strong>DispatcherServlet</strong>：前置控制器，是整个流程控制的<strong>核心</strong>，控制其他组件的执行，进行统一调度，降低组件之间的耦合性，相当于总指挥。</li>
+<li><strong>Handler</strong>：处理器，完成具体的业务逻辑，相当于 Servlet 或 Action。</li>
+<li><strong>HandlerMapping</strong>：DispatcherServlet 接收到请求之后，通过 HandlerMapping 将不同的请求映射到不同的 Handler。</li>
+<li><strong>HandlerInterceptor</strong>：处理器拦截器，是一个接口，如果需要完成一些拦截处理，可以实现该接口。</li>
+<li><strong>HandlerExecutionChain</strong>：处理器执行链，包括两部分内容：Handler 和 HandlerInterceptor（系统会有一个默认的 HandlerInterceptor，如果需要额外设置拦截，可以添加拦截器）。</li>
+<li><strong>HandlerAdapter</strong>：处理器适配器，Handler 执行业务方法之前，需要进行一系列的操作，包括表单数据的验证、数据类型的转换、将表单数据封装到 JavaBean 等，这些操作都是由 HandlerApater 来完成，开发者只需将注意力集中业务逻辑的处理上，DispatcherServlet 通过 HandlerAdapter 执行不同的 Handler。</li>
+<li><strong>ModelAndView</strong>：装载了模型数据和视图信息，作为 Handler 的处理结果，返回给 DispatcherServlet。</li>
+<li><strong>ViewResolver</strong>：视图解析器，DispatcheServlet 通过它将逻辑视图解析为物理视图，最终将渲染结果响应给客户端。</li>
+</ol>
+<h1 id="springboot-自动配置原理">SpringBoot 自动配置原理</h1>
+<p><strong>Spring Boot 自动配置原理全流程解析（以 <code>starter-web</code> 为例）</strong></p>
+<ol>
+<li>导入 <code>starter-web</code></li>
+</ol>
+<ul>
+<li>
+<p><strong>1.1. 场景启动器（Starter）</strong>：<br>
+<code>starter-web</code> 是一个场景启动器，它引入了 Web 开发所需的所有依赖，包括：</p>
+<ul>
+<li><code>starter-json</code>：用于 JSON 处理。</li>
+<li><code>starter-tomcat</code>：嵌入式 Tomcat 容器。</li>
+<li><code>springmvc</code>：Spring MVC 框架。</li>
+</ul>
+</li>
+<li>
+<p><strong>1.2. 核心场景启动器</strong>：<br>
+每个场景启动器都依赖于 <code>spring-boot-starter</code>，这是一个核心场景启动器，它引入了 Spring Boot 的基础功能，如日志、YAML 解析等。</p>
+</li>
+<li>
+<p><strong>1.3. 自动配置包 <code>spring-boot-autoconfigure</code></strong>：<br>
+核心场景启动器还会引入 <code>spring-boot-autoconfigure</code> 包，这个包中包含了自动配置所需的所有配置类。</p>
+</li>
+<li>
+<p><strong>但是SpringBoot默认只会扫描主程序所在的包及其下面的子包</strong></p>
+</li>
+</ul>
+<ol start="2">
+<li><code>@SpringBootApplication</code> 注解详解</li>
+</ol>
+<ul>
+<li>
+<p><strong>2.1. <code>@SpringBootApplication</code> 组成</strong>：<br>
+这是一个组合注解，由以下三个注解组成：</p>
+<ul>
+<li><code>@SpringBootConfiguration</code>：标识这是一个 Spring Boot 配置类。</li>
+<li><code>@EnableAutoConfiguration</code>：开启自动配置功能。</li>
+<li><code>@ComponentScan</code>：默认扫描主程序所在包及其子包。</li>
+</ul>
+</li>
+<li>
+<p><strong>2.2. 自动配置类的加载</strong>：<br>
+Spring Boot 默认只能扫描主程序所在包及其子包，因此无法直接扫描到 <code>spring-boot-autoconfigure</code> 包中的自动配置类。但是，通过 <code>@EnableAutoConfiguration</code> 注解，Spring Boot 启动时会自动加载所有相关的自动配置类。</p>
+</li>
+<li>
+<p><strong>2.3. <code>@EnableAutoConfiguration</code> 的核心功能</strong>：</p>
+<ul>
+<li>
+<p><strong><code>@Import(AutoConfigurationImportSelector.class)</code></strong>：<br>
+这个注解通过 <code>@Import</code> 机制，利用 <code>AutoConfigurationImportSelector</code> 类在项目启动时批量导入自动配置类。</p>
+</li>
+<li>
+<p><strong>加载 <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code> 文件</strong>：<br>
+Spring Boot 会读取该文件，该文件列出了所有自动配置类。</p>
+</li>
+</ul>
+</li>
+</ul>
+<ol start="3">
+<li>自动配置类（<code>xxxxAutoConfiguration</code>）</li>
+</ol>
+<ul>
+<li>
+<p><strong>3.1. 自动配置类的作用</strong>：<br>
+每个自动配置类负责根据当前环境为应用自动配置必要的组件。</p>
+</li>
+<li>
+<p><strong>3.2. 条件注解 <code>@ConditionalOnxxx</code></strong>：<br>
+每个自动配置类通常都带有条件注解，如 <code>@ConditionalOnClass</code> 或 <code>@ConditionalOnMissingBean</code>。只有当这些条件满足时，配置才会生效。</p>
+</li>
+<li>
+<p><strong>3.3. <code>@EnableConfigurationProperties</code> 注解</strong>：<br>
+自动配置类会使用 <code>@EnableConfigurationProperties</code> 注解，将配置文件中的属性值绑定到某个属性类中。例如，<code>ServerProperties</code> 类会绑定 <code>server.*</code> 开头的配置。</p>
+</li>
+<li>
+<p><strong>3.4. 修改配置文件以调整组件参数</strong>：<br>
+Spring Boot 自动配置类中使用的很多组件参数都来自 <code>xxxProperties</code> 属性类。这些属性类会从配置文件中获取对应的配置项，因此，只需要修改配置文件中的值，就能动态调整自动配置组件的行为。</p>
+</li>
+</ul>
+<ol start="4">
+<li>写业务代码</li>
+</ol>
+<ul>
+<li>
+<p><strong>4.1. 无需关心底层整合</strong>：<br>
+开发者在写业务代码时，通常无需关心底层组件的整合细节。这些整合由 Spring Boot 自动配置类提供，且自动配置类会根据实际需要启用相应的功能。</p>
+</li>
+<li>
+<p><strong>4.2. 高度简化开发流程</strong>：<br>
+通过自动配置，开发者可以专注于业务逻辑，减少了大量的配置和集成工作，大大提升了开发效率。</p>
+</li>
+</ul>
+<h1 id="spring-boot中常用注解">Spring Boot中常用注解</h1>
+<p>在 Spring Boot 中，有许多常用的注解用于配置、管理和简化开发。以下是一些常用的注解及其功能：</p>
+<ol>
+<li>
+<p><strong>核心配置注解</strong></p>
+<ul>
+<li><code>@SpringBootApplication</code>：这是一个组合注解，包括 <code>@SpringBootConfiguration</code>、<code>@EnableAutoConfiguration</code> 和 <code>@ComponentScan</code>。它标识一个 Spring Boot 应用的入口，并启用了自动配置和组件扫描。</li>
+<li><code>@EnableAutoConfiguration</code>：启用 Spring Boot 的自动配置功能，根据项目依赖自动配置 Spring 应用。</li>
+<li><code>@ComponentScan</code>：启用组件扫描，自动发现和注册 Spring Bean。通常与 <code>@Configuration</code> 或 <code>@SpringBootApplication</code> 一起使用。</li>
+<li><code>@Configuration</code>：标识一个类是配置类，通常用于定义 <code>@Bean</code> 方法来生成 Spring 管理的 Bean。</li>
+</ul>
+</li>
+<li>
+<p><strong>Bean 管理与依赖注入注解</strong></p>
+<ul>
+<li><code>@Bean</code>：用于在 <code>@Configuration</code> 类中定义一个 Bean，Spring 会将该方法的返回值注册为应用上下文中的 Bean。</li>
+<li><code>@Component</code>：标识一个类是组件类，Spring 会自动将其注册为 Bean。</li>
+<li><code>@Service</code>：这是一个特殊的 <code>@Component</code>，通常用于标识服务层的 Bean。</li>
+<li><code>@Repository</code>：也是一个特殊的 <code>@Component</code>，通常用于标识持久层的 Bean，并用于异常转换。</li>
+<li><code>@Controller</code>：用于标识控制器层的组件，处理 HTTP 请求。</li>
+<li><code>@Autowired</code>：用于自动注入依赖对象，可以用在构造器、字段或方法上。</li>
+<li><code>@Qualifier</code>：用于在自动注入时指定 Bean 的名称或别名，以解决依赖注入的歧义。</li>
+</ul>
+</li>
+<li>
+<p><strong>Web 层注解</strong></p>
+<ul>
+<li><code>@RestController</code>：这是 <code>@Controller</code> 和 <code>@ResponseBody</code> 的组合注解，通常用于构建 RESTful Web 服务。它将控制器方法的返回值直接写入 HTTP 响应体中。</li>
+<li><code>@RequestMapping</code>：用于映射 HTTP 请求到控制器方法上，可以用于类和方法级别。也有细分注解，如 <code>@GetMapping</code>、<code>@PostMapping</code>、<code>@PutMapping</code>、<code>@DeleteMapping</code>，分别对应 GET、POST、PUT 和 DELETE 请求。</li>
+<li><code>@PathVariable</code>：用于绑定 URL 路径中的变量到方法参数。</li>
+<li><code>@RequestParam</code>：用于将请求参数绑定到方法参数上。</li>
+<li><code>@RequestBody</code>：用于将请求体中的 JSON 或 XML 数据绑定到方法参数。</li>
+<li><code>@ResponseBody</code>：将方法返回值直接写入 HTTP 响应体，而不是通过视图解析器解析为视图。</li>
+</ul>
+</li>
+<li>
+<p><strong>数据访问与事务管理注解</strong></p>
+<ul>
+<li><code>@Entity</code>：标识一个类是 JPA 实体类，通常与 JPA 持久化注解（如 <code>@Table</code>、<code>@Id</code>、<code>@Column</code>）一起使用。</li>
+<li><code>@Table</code>：指定实体类映射到的数据库表名。</li>
+<li><code>@Id</code>：指定实体类的主键字段。</li>
+<li><code>@GeneratedValue</code>：指定主键生成策略。</li>
+<li><code>@Repository</code>：标识持久层组件，通常用于数据访问对象（DAO）类，具有异常转换功能。</li>
+<li><code>@Transactional</code>：用于声明式事务管理，确保在方法执行过程中发生的数据库操作能够被事务管理器管理。</li>
+</ul>
+</li>
+<li>
+<p><strong>配置与条件注解</strong></p>
+<ul>
+<li>
+<p><code>@Value</code>：用于注入外部配置值到 Spring Bean 的字段中。</p>
+</li>
+<li>
+<p><code>@PropertySource</code>：用于加载指定的属性文件到 Spring 环境中。</p>
+</li>
+<li>
+<p><code>@Conditional</code> 系列注解：这些注解用于根据特定条件来决定是否启用配置或 Bean。</p>
+<ul>
+<li>
+<p><code>@ConditionalOnClass</code>：当类路径下存在指定类时，才会创建 Bean。</p>
+</li>
+<li>
+<p><code>@ConditionalOnMissingClass</code>：当类路径下不存在指定类时，才会创建 Bean。</p>
+</li>
+<li>
+<p><code>@ConditionalOnBean</code>：当上下文中存在指定的 Bean 时，才会创建当前的 Bean。</p>
+</li>
+<li>
+<p><code>@ConditionalOnMissingBean</code>：当上下文中不存在指定的 Bean 时，才会创建当前的 Bean。</p>
+</li>
+<li>
+<p><code>@ConditionalOnProperty</code>：当指定的属性存在并且符合指定的条件时，才会创建 Bean。</p>
+</li>
+</ul>
+</li>
+<li>
+<p><code>@ConfigurationProperties</code>：用于将属性文件中的配置映射到 Java 类的字段中，通常用于配置类。</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>测试注解</strong></p>
+<ul>
+<li><code>@SpringBootTest</code>：用于启动整个 Spring 容器并加载应用程序的上下文进行集成测试。</li>
+<li><code>@MockBean</code>：用于在测试中创建和注入一个模拟（mock）的 Bean。</li>
+<li><code>@TestConfiguration</code>：用于在测试类中定义特定的 Bean 配置。</li>
+</ul>
+</li>
+</ol>
+<h1 id="spring常见注解">Spring常见注解</h1>
+<ol>
+<li><strong>声明bean的注解</strong>：<code>@Component  @Service @Repository  @Controller</code></li>
+<li><strong>注入bean的注解</strong>：<code>@Autowired</code>：由Spring提供   <code>@Resource</code>：由JSR-250提供</li>
+<li><strong>java配置类相关注解</strong>：<code>@Configuration   @Bean   @ComponentScan </code></li>
+<li><strong>切面（AOP）相关注解</strong>：<code>@Aspect  @After  @Before  @Around  @PointCut  @EnableAspectJAutoProxy</code></li>
+<li><strong>@Bean的属性支持</strong>：<code>@Scope</code></li>
+<li><strong>@Value注解</strong>：<code>@Value  @PropertySource</code></li>
+<li><strong>环境切换</strong>：<code>@Profile</code></li>
+<li><strong>定时任务相关</strong>：<code>@EnableScheduling  @Scheduled</code></li>
+<li><strong>@Enable*注解说明</strong>
+<ul>
+<li><code>@EnableAspectJAutoProxy</code> 开启对AspectJ自动代理的支持</li>
+<li><code>@EnableAsync</code> 开启异步方法的支持</li>
+<li><code>@EnableScheduling</code> 开启计划任务的支持</li>
+<li><code>@EnableWebMvc</code> 开启Web MVC的配置支持</li>
+<li><code>@EnableConfigurationProperties</code> 开启对<code>@ConfigurationProperties</code>注解配置Bean的支持</li>
+<li><code>@EnableJpaRepositories</code> 开启对SpringData JPA Repository的支持</li>
+<li><code>@EnableTransactionManagement</code> 开启注解式事务的支持</li>
+<li><code>@EnableCaching</code> 开启注解式的缓存支持</li>
+</ul>
+</li>
+</ol>
+<h1 id="springmvc常用注解">SpringMVC常用注解</h1>
+<p><code>@EnableWebMvc</code> 在配置类中开启Web MVC的配置支持</p>
+<p><code>@Controller</code> 声明该类为SpringMVC中的Controller</p>
+<p><code>@RequestMapping</code> 用于映射Web请求，包括访问路径和参数</p>
+<ul>
+<li><code>@GetMapping</code></li>
+<li><code>@PostMapping</code></li>
+<li><code>@DeleteMapping</code></li>
+<li><code>@PutMapping</code></li>
+</ul>
+<p><code>@ResponseBody</code> 支持将返回值放在response内，而不是一个页面，通常用户返回json数据</p>
+<p><code>@RequestBody</code> 允许request的参数在request体中，而不是在直接连接在地址后面。</p>
+<p><code>@PathVariable</code> 用于接收路径参数</p>
+<p><code>@RestController</code> 该注解为一个组合注解，相当于<code>@Controller</code>和<code>@ResponseBody</code>的组合</p>
+<p><code>@ExceptionHandler</code> 用于全局处理控制器里的异常</p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://shengwei42.github.io/post/java-ji-chu/">
+                  <h3 class="post-title">
+                    Java基础
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

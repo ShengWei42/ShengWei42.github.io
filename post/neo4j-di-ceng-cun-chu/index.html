@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Neo4j图数据库底层存储 | shengwei的个人博客</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://shengwei42.github.io/favicon.ico?v=1752389319188">
+<link rel="stylesheet" href="https://shengwei42.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="一、文章主旨归纳
+
+Neo4j 的底层存储并不是传统的“按边切”或“按点切”的方式，而是构建了一个以 ID 为中心、可直接定位到磁盘偏移位置的定长存储系统，通过这种方式实现了免索引邻接（Index-Free Adjacency），大幅提升图..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://shengwei42.github.io">
+        <img src="https://shengwei42.github.io/images/avatar.png?v=1752389319188" class="site-logo">
+        <h1 class="site-title">shengwei的个人博客</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/tags" class="site-nav">
+            关于我
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      一个记录日常学习笔记的博客网站
+    </div>
+    <div class="site-footer">
+      联系：zhoushengwei42@gmail.com
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Neo4j图数据库底层存储</h2>
+            <div class="post-date">2025-07-13</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="一-文章主旨归纳">一、文章主旨归纳</h2>
+<blockquote>
+<p>Neo4j 的底层存储并不是传统的“按边切”或“按点切”的方式，而是构建了一个以 ID 为中心、可直接定位到磁盘偏移位置的定长存储系统，通过这种方式实现了<strong>免索引邻接（Index-Free Adjacency）</strong>，大幅提升图遍历性能。</p>
+</blockquote>
+<hr>
+<h2 id="二-基本概念解读">二、基本概念解读</h2>
+<h3 id="1-属性图property-graph">1. 属性图（Property Graph）</h3>
+<p>Neo4j 使用的是<strong>Labeled Property Graph</strong>，图由：</p>
+<ul>
+<li><strong>节点（Node）</strong>：可以带多个标签（Label）</li>
+<li><strong>关系（Relationship）</strong>：有方向、有类型（Type）</li>
+<li><strong>属性（Property）</strong>：可以存在于节点和关系上，键值对形式</li>
+</ul>
+<p>这种模型非常适合表示社交网络、知识图谱等连接性强的数据。</p>
+<h3 id="2-按边切-vs-按点切-vs-原生图存储">2. 按边切 vs 按点切 vs 原生图存储</h3>
+<ul>
+<li><strong>按边切</strong>（Edge-centric）：
+<ul>
+<li>关系和两个端点绑定，两份存储副本（起点和终点各存一份）</li>
+<li>多见于 OLTP 图数据库，如 JanusGraph、HugeGraph</li>
+</ul>
+</li>
+<li><strong>按点切</strong>（Vertex-centric）：
+<ul>
+<li>把所有边聚合在节点中，适合批量计算（OLAP）</li>
+</ul>
+</li>
+<li><strong>Neo4j 的方式</strong>：原生图存储（Native Graph Storage）
+<ul>
+<li><strong>点、边、属性各自独立定长存储</strong></li>
+<li>所有实体通过 ID 组织结构，并通过 ID 定位 → <strong>无需索引定位关系</strong>（即免索引邻接）</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="三-neo4j-磁盘结构">三、Neo4j 磁盘结构</h2>
+<h3 id="点结构15-字节">点结构（15 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>inUse标志 + 高位的 nextRel 和 nextProp</td>
+</tr>
+<tr>
+<td>4 bytes</td>
+<td>nextRelId：第一条边 ID</td>
+</tr>
+<tr>
+<td>4 bytes</td>
+<td>nextPropId：第一个属性 ID</td>
+</tr>
+<tr>
+<td>5 bytes</td>
+<td>labels（存储标签的 bitmap 或 token ID）</td>
+</tr>
+<tr>
+<td>1 byte</td>
+<td>extra（是否为 supernode 的标识）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>亮点：</strong> 点只保存<strong>第一条边和第一个属性</strong>，通过链式结构连接。</p>
+<hr>
+<h3 id="关系结构34-字节">关系结构（34 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>标识位（inUse、firstNode高位、nextProp高位）</td>
+</tr>
+<tr>
+<td>4 × 7 bytes</td>
+<td>起点/终点、前/后关系、属性ID、关系类型</td>
+</tr>
+<tr>
+<td>1 byte</td>
+<td>标记是否为起点/终点的第一条边（用于加速遍历）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>亮点：</strong></p>
+<ul>
+<li>每条关系都维护<strong>双向链表</strong>结构（前一条关系 / 后一条关系）</li>
+<li>通过关系链条，可以从任意一个点沿着其边关系不断向外遍历</li>
+</ul>
+<hr>
+<h3 id="属性结构41-字节">属性结构（41 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>ID 高位</td>
+</tr>
+<tr>
+<td>4 + 4 bytes</td>
+<td>前后属性块 ID（组成双链表）</td>
+</tr>
+<tr>
+<td>4 × 8 bytes</td>
+<td>最多 4 个属性块（存储具体属性）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>动态块机制：</strong> 如果属性值太大（如字符串、数组），就会引用 <code>dynamic string/array block</code>。</p>
+<hr>
+<h2 id="四-图遍历机制免索引邻接index-free-adjacency">四、图遍历机制：免索引邻接（Index-Free Adjacency）</h2>
+<h3 id="neo4j-遍历步骤">Neo4j 遍历步骤：</h3>
+<ol>
+<li>
+<p><strong>通过索引定位节点（一次性）</strong></p>
+<pre><code class="language-cypher">MATCH (n:Person {name: &quot;Alice&quot;})
+</code></pre>
+<blockquote>
+<p>这一步可能会用到 Lucene 或 B+ 树索引，找到节点ID。</p>
+</blockquote>
+</li>
+<li>
+<p><strong>直接通过ID × 15 定位到 <code>nodestore.db</code></strong></p>
+<blockquote>
+<p>固定偏移 = 定长记录大小 × ID，几乎是 O(1) 操作。</p>
+</blockquote>
+</li>
+<li>
+<p><strong>通过 <code>nextRelId</code> 跳转到边</strong></p>
+<ul>
+<li>进入 <code>relationshipstore.db</code>，根据 ID × 34 定位。</li>
+<li>判断边类型，是否是我们要找的 <code>KNOWS</code>。</li>
+<li>获取终点节点 ID，继续跳边（通过 SN，SP，EN，EP）</li>
+</ul>
+</li>
+</ol>
+<h3 id="特点">特点：</h3>
+<ul>
+<li><strong>遍历从点开始 → 跳边 → 到点</strong></li>
+<li><strong>中间完全不需要通过索引查找关系</strong></li>
+<li><strong>遍历耗时仅与实际路径长度有关，不随图总规模增加！</strong></li>
+</ul>
+<p>这就是所谓的<strong>免索引邻接（Index-Free Adjacency）</strong></p>
+<hr>
+<h2 id="五-图存储带来的规模和性能优势">五、图存储带来的规模和性能优势</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>Neo4j 存储限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>节点 / 关系 ID</td>
+<td>35 位（≈ 340 亿）</td>
+</tr>
+<tr>
+<td>属性 ID</td>
+<td>36 位（≈ 680 亿）</td>
+</tr>
+<tr>
+<td>单节点边数量</td>
+<td>支持百万级（DenseNode）</td>
+</tr>
+</tbody>
+</table>
+<p>Neo4j 使用 <strong>定长记录 + ID 定位 + 关系链表</strong> 实现了：</p>
+<ul>
+<li>高吞吐写入（日志先行）</li>
+<li>快速图遍历（常数级别）</li>
+<li>高图规模（十亿级节点边）</li>
+</ul>
+<hr>
+<h2 id="六-总结与重点提炼">六、总结与重点提炼</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原生图存储结构</td>
+<td>点、边、属性分别独立存储，定长记录结构</td>
+</tr>
+<tr>
+<td>ID 定位机制</td>
+<td>通过 ID × 记录大小 → 直接偏移访问，跳过索引</td>
+</tr>
+<tr>
+<td>免索引邻接</td>
+<td>关系链表连接每个点与其所有边，遍历完全靠链表，无需额外索引</td>
+</tr>
+<tr>
+<td>存储优化技巧</td>
+<td>属性使用动态块存储，边支持双向链表，超级节点专门标记优化</td>
+</tr>
+<tr>
+<td>图遍历性能</td>
+<td>O(1) 级别邻接查找 + O(k) 级边遍历（k为边数量）</td>
+</tr>
+</tbody>
+</table>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://shengwei42.github.io/post/shuang-map-tong-ji-jie-kou-diao-yong-liang/">
+                  <h3 class="post-title">
+                    双Map统计接口调用量
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

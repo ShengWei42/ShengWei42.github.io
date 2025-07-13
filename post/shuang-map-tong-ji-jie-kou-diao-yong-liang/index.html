@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>双Map统计接口调用量 | shengwei的个人博客</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://shengwei42.github.io/favicon.ico?v=1752389319188">
+<link rel="stylesheet" href="https://shengwei42.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="一、系统核心设计目的
+目的是在 高并发接口调用环境（TPS&gt;10w） 下，实时统计各调用方（Code）对每个接口的调用次数，并定期将统计数据上报到消息队列 MQ。
+核心代码设计：
+class MethodCount {
+
+    //..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://shengwei42.github.io">
+        <img src="https://shengwei42.github.io/images/avatar.png?v=1752389319188" class="site-logo">
+        <h1 class="site-title">shengwei的个人博客</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="https://shengwei42.github.io/tags" class="site-nav">
+            关于我
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      一个记录日常学习笔记的博客网站
+    </div>
+    <div class="site-footer">
+      联系：zhoushengwei42@gmail.com
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">双Map统计接口调用量</h2>
+            <div class="post-date">2025-07-01</div>
+            
+            <div class="post-content" v-pre>
+              <h1 id="一-系统核心设计目的">一、系统核心设计目的</h1>
+<p>目的是在 <strong>高并发接口调用环境（TPS&gt;10w）</strong> 下，<strong>实时统计各调用方（Code）对每个接口的调用次数</strong>，并<strong>定期将统计数据上报到消息队列 MQ</strong>。</p>
+<p>核心代码设计：</p>
+<pre><code>class MethodCount {
+
+    // 调用量计数器 key:调用方Code value:&lt;bizId-iFaceId, 调用量&gt;
+    // 双缓冲区Map A和B
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; mapA = new ConcurrentHashMap&lt;&gt;();
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; mapB = new ConcurrentHashMap&lt;&gt;();
+
+    // 当前激活的Map的引用
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; activeMap = mapA;
+
+    public update(接口) {
+        1.调用getmap方法获取当前map
+        1.更新对应map的对应kv
+    }
+
+    // 这个方法会被内部的定时任务调用，定期上报
+    public repoort() {
+
+        1.切换标记量
+        atomicInt flag++;
+
+        1.从旧ConcurrentHashMap中取出数据，构造msg
+
+        2.向MQ发送消息
+
+        3.Clear Map 中的旧数据
+
+    }
+
+    public Map getActiveMap() {
+        if (flag == 奇数) return MapA;
+        else return MapB；
+    }
+}
+</code></pre>
+<h1 id="二-为什么需要使用双-map">二、为什么需要使用“双 Map”？</h1>
+<h3 id="背景场景调用量统计系统">背景场景：调用量统计系统</h3>
+<ul>
+<li>每次接口调用都要统计次数（实时、频繁）</li>
+<li>统计数据要定期上报（如每 10 秒、每分钟发送一次到 MQ）</li>
+</ul>
+<p>这两个动作：</p>
+<table>
+<thead>
+<tr>
+<th>动作</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>实时统计（update）</td>
+<td>高频、写操作、多线程并发写入</td>
+</tr>
+<tr>
+<td>定期上报（report）</td>
+<td>批量读、读完后还要清空数据</td>
+</tr>
+</tbody>
+</table>
+<p>这两个动作会<strong>同时进行</strong>，而<strong>写入和清空之间可能冲突</strong>，这就是引入双 Map 的根本原因。</p>
+<h1 id="三-如果只使用一个-map会遇到的问题">三、如果只使用一个 Map，会遇到的问题</h1>
+<h3 id="场景1写入过程中被清空导致数据丢失">场景1：写入过程中被清空，导致数据丢失</h3>
+<pre><code>copy// 线程 A：接口调用，update 还没完成
+map.put(key, value);
+
+// 线程 B：定时任务开始 report，清空 map
+map.clear();  // 刚好线程 A 的写入被覆盖或丢失
+</code></pre>
+<h3 id="场景2定时任务统计的数据可能不完整">场景2：定时任务统计的数据可能不完整</h3>
+<ul>
+<li>比如你每 10 秒上报一次 map 中的调用量</li>
+<li>在第 9 秒，有用户请求正在更新 map，此时定时器开始读取和清空 map</li>
+<li>这个“正在进行的请求”的数据，可能：
+<ul>
+<li><strong>被读到一半</strong>（数据不一致）</li>
+<li><strong>被清空还没写完</strong>（丢失）</li>
+</ul>
+</li>
+</ul>
+<h3 id="场景3mapsize-还没变但内容已经变了读到脏数据">场景3：map.size() 还没变，但内容已经变了（读到脏数据）</h3>
+<h1 id="四-使用双-map的好处">四、使用“双 Map”的好处</h1>
+<h3 id="核心思想写读分离互不干扰">核心思想：<strong>写读分离，互不干扰</strong></h3>
+<ul>
+<li>
+<p>两个 Map：<code>mapA</code>, <code>mapB</code></p>
+</li>
+<li>
+<p><code>activeMap</code>：当前写入使用的 Map</p>
+</li>
+<li>
+<p>每次定时任务</p>
+<pre><code>report()
+</code></pre>
+<p>时：</p>
+<ul>
+<li>切换 <code>activeMap</code> 指针：从 A → B（或 B → A）</li>
+<li>新的请求都写入新的 Map（例如 B）</li>
+<li>定时任务可以安心地读取并清空旧的 Map（A）</li>
+</ul>
+</li>
+</ul>
+<h3 id="效果">效果：</h3>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据一致</td>
+<td>report 期间不再写入旧 Map，避免数据丢失或读到脏数据</td>
+</tr>
+<tr>
+<td>线程安全</td>
+<td>没有必要加锁，也不会影响写入线程</td>
+</tr>
+<tr>
+<td>性能更高</td>
+<td>写线程和读线程互不干扰，系统吞吐量提升明显</td>
+</tr>
+</tbody>
+</table>
+<h1 id="五-为什么定时上报之后还必须清空统计数据">五、为什么定时上报之后还必须清空统计数据？</h1>
+<h2 id="一-系统设计目标回顾">一、系统设计目标回顾</h2>
+<p>设计的是一个<strong>调用量统计系统</strong>，目标是：</p>
+<blockquote>
+<p>实时记录各调用方对各接口的调用次数，并<strong>定时上报</strong>到 MQ 或日志系统进行存储/分析/展示。</p>
+</blockquote>
+<p>而这个“调用次数”其实是<strong>一个时间段内的增量数据</strong>（例如过去10秒的调用量），并不是一个永久累计值。</p>
+<h2 id="二-为什么上报后必须清空数据">二、为什么上报后必须清空数据？</h2>
+<h3 id="1-避免重复上报">1. <strong>避免重复上报</strong></h3>
+<ul>
+<li>如果不上报后清空数据，Map 中的计数会一直累加。</li>
+<li>下一次上报时，仍然是<strong>累计总数</strong>。</li>
+<li>那每次上报的都是重复的数据，<strong>监控图表/日志分析就会错误</strong>。</li>
+</ul>
+<p>比如：</p>
+<table>
+<thead>
+<tr>
+<th>时间点</th>
+<th>实际调用数</th>
+<th>累计值（如果不清空）</th>
+<th>上报值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第10秒</td>
+<td>100次</td>
+<td>100</td>
+<td>100</td>
+</tr>
+<tr>
+<td>第20秒</td>
+<td>50次</td>
+<td>150</td>
+<td>❌150（应该是50）</td>
+</tr>
+<tr>
+<td>第30秒</td>
+<td>30次</td>
+<td>180</td>
+<td>❌180（应该是30）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-节省内存空间">2. <strong>节省内存空间</strong></h3>
+<ul>
+<li>每次调用都在向 Map 中写入数据。</li>
+<li>如果不清空 Map，数据会无限增长，最终导致：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>内存泄漏</td>
+<td>系统内存越来越大，GC 压力加剧，甚至 OOM</td>
+</tr>
+<tr>
+<td>冗余数据</td>
+<td>Map 中可能保留了早就没用的接口/调用方数据</td>
+</tr>
+</tbody>
+</table>
+<p>清空后，Map 是“干净”的，下一轮统计可以轻松开始。</p>
+<h3 id="3-符合时间窗口统计的设计理念">3. <strong>符合“时间窗口统计”的设计理念</strong></h3>
+<ul>
+<li>统计系统实际上在模拟一个“滑动窗口”或“时间窗口”的统计逻辑。</li>
+<li>每次上报的是过去 X 秒的数据（比如 10 秒）。</li>
+<li>如果不清空，数据就会跨窗口重叠，破坏统计精度。</li>
+</ul>
+<h2 id="三-如果不清空会发生什么问题">三、如果<strong>不清空</strong>会发生什么问题？</h2>
+<table>
+<thead>
+<tr>
+<th>问题类型</th>
+<th>描述</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据重复</td>
+<td>每次上报的数据包含上次的内容</td>
+<td>上层系统误以为调用量持续暴涨</td>
+</tr>
+<tr>
+<td>内存积压</td>
+<td>Map 数据不断累积</td>
+<td>内存使用量增长，GC频繁甚至OOM</td>
+</tr>
+<tr>
+<td>统计错误</td>
+<td>指标不再代表过去 10 秒，而是整个生命周期</td>
+<td>图表变成斜线，不再有波动性</td>
+</tr>
+<tr>
+<td>流量预测不准</td>
+<td>会把过去所有历史调用算进来</td>
+<td>告警、限流等都会被误触发</td>
+</tr>
+</tbody>
+</table>
+<h2 id="四-有没有不清空的情况">四、有没有不清空的情况？</h2>
+<p>有，但前提是<strong>设计的不是“增量上报”，而是“全量状态上报”</strong>。比如：</p>
+<ul>
+<li>是一个长期总调用次数的记录系统（如累加 PV）</li>
+<li>每次上报前后都保存上一次的快照，取“当前值 - 上次值”作为增量</li>
+</ul>
+<p>这种方式需要更复杂的状态管理，远不如清空来得直接、简洁、可靠。</p>
+<h1 id="update方法实现细节">update()方法实现细节</h1>
+<p>首先有一个业务背景，接口的调用量是很大的，所以update()方法的并发量是很高的，而report()方法的调用量就比较低，仅仅被内部的ScheuleExecutorService定时任务线程池调用，每隔一定的时间上报到MQ中，所以这就要求update()方法具有很高的性能。而基本实现有三种方式，分别为synchronized + HashMap、 ConcurrentHashMap + get+put、ConcurrentHashMap + merge()。</p>
+<h2 id="调研结论">调研结论</h2>
+<table>
+<thead>
+<tr>
+<th>操作方式</th>
+<th>吞吐 TPS</th>
+<th>延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>synchronized + HashMap</td>
+<td>低（&lt;3w）</td>
+<td>高</td>
+</tr>
+<tr>
+<td>ConcurrentHashMap + get+put</td>
+<td>中等（5w~6w）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>ConcurrentHashMap + merge()</td>
+<td>高（&gt;10w）</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1-synchronized-hashmap">1. synchronized + HashMap</h3>
+<ul>
+<li>单线程安全，依赖锁，线程阻塞严重。</li>
+<li><strong>适用于低并发环境</strong>，在高并发下锁竞争激烈。</li>
+</ul>
+<h3 id="2-concurrenthashmap-getput">2. ConcurrentHashMap + get+put</h3>
+<ul>
+<li>get -&gt; 判断有无 -&gt; put（需要显式处理并发问题）</li>
+<li>存在 <strong>竞态条件问题</strong>，需要再做 <code>computeIfAbsent</code> 或加锁，性能一般。</li>
+</ul>
+<h3 id="3-concurrenthashmap-merge">3. ConcurrentHashMap + merge()</h3>
+<ul>
+<li>是线程安全的原子操作，封装了 get + put + update 的过程。</li>
+<li>没有显式加锁，<strong>性能最佳</strong>，最适合高并发统计场景。</li>
+</ul>
+<pre><code class="language-java">map.merge(key, 1L, Long::sum)
+</code></pre>
+<p>意思是：如果 key 存在就自增，否则初始化为 1。</p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://shengwei42.github.io/post/elasticsearch/">
+                  <h3 class="post-title">
+                    Elasticsearch
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

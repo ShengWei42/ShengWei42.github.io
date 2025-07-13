@@ -1,0 +1,4450 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://shengwei42.github.io</id>
+    <title>shengwei的个人博客</title>
+    <updated>2025-07-13T06:48:43.057Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://shengwei42.github.io"/>
+    <link rel="self" href="https://shengwei42.github.io/atom.xml"/>
+    <subtitle>一个记录日常学习笔记的博客网站</subtitle>
+    <logo>https://shengwei42.github.io/images/avatar.png</logo>
+    <icon>https://shengwei42.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2025, shengwei的个人博客</rights>
+    <entry>
+        <title type="html"><![CDATA[Neo4j图数据库底层存储]]></title>
+        <id>https://shengwei42.github.io/post/neo4j-di-ceng-cun-chu/</id>
+        <link href="https://shengwei42.github.io/post/neo4j-di-ceng-cun-chu/">
+        </link>
+        <updated>2025-07-13T06:47:16.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="一-文章主旨归纳">一、文章主旨归纳</h2>
+<blockquote>
+<p>Neo4j 的底层存储并不是传统的“按边切”或“按点切”的方式，而是构建了一个以 ID 为中心、可直接定位到磁盘偏移位置的定长存储系统，通过这种方式实现了<strong>免索引邻接（Index-Free Adjacency）</strong>，大幅提升图遍历性能。</p>
+</blockquote>
+<hr>
+<h2 id="二-基本概念解读">二、基本概念解读</h2>
+<h3 id="1-属性图property-graph">1. 属性图（Property Graph）</h3>
+<p>Neo4j 使用的是<strong>Labeled Property Graph</strong>，图由：</p>
+<ul>
+<li><strong>节点（Node）</strong>：可以带多个标签（Label）</li>
+<li><strong>关系（Relationship）</strong>：有方向、有类型（Type）</li>
+<li><strong>属性（Property）</strong>：可以存在于节点和关系上，键值对形式</li>
+</ul>
+<p>这种模型非常适合表示社交网络、知识图谱等连接性强的数据。</p>
+<h3 id="2-按边切-vs-按点切-vs-原生图存储">2. 按边切 vs 按点切 vs 原生图存储</h3>
+<ul>
+<li><strong>按边切</strong>（Edge-centric）：
+<ul>
+<li>关系和两个端点绑定，两份存储副本（起点和终点各存一份）</li>
+<li>多见于 OLTP 图数据库，如 JanusGraph、HugeGraph</li>
+</ul>
+</li>
+<li><strong>按点切</strong>（Vertex-centric）：
+<ul>
+<li>把所有边聚合在节点中，适合批量计算（OLAP）</li>
+</ul>
+</li>
+<li><strong>Neo4j 的方式</strong>：原生图存储（Native Graph Storage）
+<ul>
+<li><strong>点、边、属性各自独立定长存储</strong></li>
+<li>所有实体通过 ID 组织结构，并通过 ID 定位 → <strong>无需索引定位关系</strong>（即免索引邻接）</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="三-neo4j-磁盘结构">三、Neo4j 磁盘结构</h2>
+<h3 id="点结构15-字节">点结构（15 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>inUse标志 + 高位的 nextRel 和 nextProp</td>
+</tr>
+<tr>
+<td>4 bytes</td>
+<td>nextRelId：第一条边 ID</td>
+</tr>
+<tr>
+<td>4 bytes</td>
+<td>nextPropId：第一个属性 ID</td>
+</tr>
+<tr>
+<td>5 bytes</td>
+<td>labels（存储标签的 bitmap 或 token ID）</td>
+</tr>
+<tr>
+<td>1 byte</td>
+<td>extra（是否为 supernode 的标识）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>亮点：</strong> 点只保存<strong>第一条边和第一个属性</strong>，通过链式结构连接。</p>
+<hr>
+<h3 id="关系结构34-字节">关系结构（34 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>标识位（inUse、firstNode高位、nextProp高位）</td>
+</tr>
+<tr>
+<td>4 × 7 bytes</td>
+<td>起点/终点、前/后关系、属性ID、关系类型</td>
+</tr>
+<tr>
+<td>1 byte</td>
+<td>标记是否为起点/终点的第一条边（用于加速遍历）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>亮点：</strong></p>
+<ul>
+<li>每条关系都维护<strong>双向链表</strong>结构（前一条关系 / 后一条关系）</li>
+<li>通过关系链条，可以从任意一个点沿着其边关系不断向外遍历</li>
+</ul>
+<hr>
+<h3 id="属性结构41-字节">属性结构（41 字节）</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 byte</td>
+<td>ID 高位</td>
+</tr>
+<tr>
+<td>4 + 4 bytes</td>
+<td>前后属性块 ID（组成双链表）</td>
+</tr>
+<tr>
+<td>4 × 8 bytes</td>
+<td>最多 4 个属性块（存储具体属性）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>动态块机制：</strong> 如果属性值太大（如字符串、数组），就会引用 <code>dynamic string/array block</code>。</p>
+<hr>
+<h2 id="四-图遍历机制免索引邻接index-free-adjacency">四、图遍历机制：免索引邻接（Index-Free Adjacency）</h2>
+<h3 id="neo4j-遍历步骤">Neo4j 遍历步骤：</h3>
+<ol>
+<li>
+<p><strong>通过索引定位节点（一次性）</strong></p>
+<pre><code class="language-cypher">MATCH (n:Person {name: &quot;Alice&quot;})
+</code></pre>
+<blockquote>
+<p>这一步可能会用到 Lucene 或 B+ 树索引，找到节点ID。</p>
+</blockquote>
+</li>
+<li>
+<p><strong>直接通过ID × 15 定位到 <code>nodestore.db</code></strong></p>
+<blockquote>
+<p>固定偏移 = 定长记录大小 × ID，几乎是 O(1) 操作。</p>
+</blockquote>
+</li>
+<li>
+<p><strong>通过 <code>nextRelId</code> 跳转到边</strong></p>
+<ul>
+<li>进入 <code>relationshipstore.db</code>，根据 ID × 34 定位。</li>
+<li>判断边类型，是否是我们要找的 <code>KNOWS</code>。</li>
+<li>获取终点节点 ID，继续跳边（通过 SN，SP，EN，EP）</li>
+</ul>
+</li>
+</ol>
+<h3 id="特点">特点：</h3>
+<ul>
+<li><strong>遍历从点开始 → 跳边 → 到点</strong></li>
+<li><strong>中间完全不需要通过索引查找关系</strong></li>
+<li><strong>遍历耗时仅与实际路径长度有关，不随图总规模增加！</strong></li>
+</ul>
+<p>这就是所谓的<strong>免索引邻接（Index-Free Adjacency）</strong></p>
+<hr>
+<h2 id="五-图存储带来的规模和性能优势">五、图存储带来的规模和性能优势</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>Neo4j 存储限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>节点 / 关系 ID</td>
+<td>35 位（≈ 340 亿）</td>
+</tr>
+<tr>
+<td>属性 ID</td>
+<td>36 位（≈ 680 亿）</td>
+</tr>
+<tr>
+<td>单节点边数量</td>
+<td>支持百万级（DenseNode）</td>
+</tr>
+</tbody>
+</table>
+<p>Neo4j 使用 <strong>定长记录 + ID 定位 + 关系链表</strong> 实现了：</p>
+<ul>
+<li>高吞吐写入（日志先行）</li>
+<li>快速图遍历（常数级别）</li>
+<li>高图规模（十亿级节点边）</li>
+</ul>
+<hr>
+<h2 id="六-总结与重点提炼">六、总结与重点提炼</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原生图存储结构</td>
+<td>点、边、属性分别独立存储，定长记录结构</td>
+</tr>
+<tr>
+<td>ID 定位机制</td>
+<td>通过 ID × 记录大小 → 直接偏移访问，跳过索引</td>
+</tr>
+<tr>
+<td>免索引邻接</td>
+<td>关系链表连接每个点与其所有边，遍历完全靠链表，无需额外索引</td>
+</tr>
+<tr>
+<td>存储优化技巧</td>
+<td>属性使用动态块存储，边支持双向链表，超级节点专门标记优化</td>
+</tr>
+<tr>
+<td>图遍历性能</td>
+<td>O(1) 级别邻接查找 + O(k) 级边遍历（k为边数量）</td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[双Map统计接口调用量]]></title>
+        <id>https://shengwei42.github.io/post/shuang-map-tong-ji-jie-kou-diao-yong-liang/</id>
+        <link href="https://shengwei42.github.io/post/shuang-map-tong-ji-jie-kou-diao-yong-liang/">
+        </link>
+        <updated>2025-07-01T14:34:02.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="一-系统核心设计目的">一、系统核心设计目的</h1>
+<p>目的是在 <strong>高并发接口调用环境（TPS&gt;10w）</strong> 下，<strong>实时统计各调用方（Code）对每个接口的调用次数</strong>，并<strong>定期将统计数据上报到消息队列 MQ</strong>。</p>
+<p>核心代码设计：</p>
+<pre><code>class MethodCount {
+
+    // 调用量计数器 key:调用方Code value:&lt;bizId-iFaceId, 调用量&gt;
+    // 双缓冲区Map A和B
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; mapA = new ConcurrentHashMap&lt;&gt;();
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; mapB = new ConcurrentHashMap&lt;&gt;();
+
+    // 当前激活的Map的引用
+    private static volatile ConcurrentHashMap&lt;String, ConcurrentHashMap&lt;String, Long&gt;&gt; activeMap = mapA;
+
+    public update(接口) {
+        1.调用getmap方法获取当前map
+        1.更新对应map的对应kv
+    }
+
+    // 这个方法会被内部的定时任务调用，定期上报
+    public repoort() {
+
+        1.切换标记量
+        atomicInt flag++;
+
+        1.从旧ConcurrentHashMap中取出数据，构造msg
+
+        2.向MQ发送消息
+
+        3.Clear Map 中的旧数据
+
+    }
+
+    public Map getActiveMap() {
+        if (flag == 奇数) return MapA;
+        else return MapB；
+    }
+}
+</code></pre>
+<h1 id="二-为什么需要使用双-map">二、为什么需要使用“双 Map”？</h1>
+<h3 id="背景场景调用量统计系统">背景场景：调用量统计系统</h3>
+<ul>
+<li>每次接口调用都要统计次数（实时、频繁）</li>
+<li>统计数据要定期上报（如每 10 秒、每分钟发送一次到 MQ）</li>
+</ul>
+<p>这两个动作：</p>
+<table>
+<thead>
+<tr>
+<th>动作</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>实时统计（update）</td>
+<td>高频、写操作、多线程并发写入</td>
+</tr>
+<tr>
+<td>定期上报（report）</td>
+<td>批量读、读完后还要清空数据</td>
+</tr>
+</tbody>
+</table>
+<p>这两个动作会<strong>同时进行</strong>，而<strong>写入和清空之间可能冲突</strong>，这就是引入双 Map 的根本原因。</p>
+<h1 id="三-如果只使用一个-map会遇到的问题">三、如果只使用一个 Map，会遇到的问题</h1>
+<h3 id="场景1写入过程中被清空导致数据丢失">场景1：写入过程中被清空，导致数据丢失</h3>
+<pre><code>copy// 线程 A：接口调用，update 还没完成
+map.put(key, value);
+
+// 线程 B：定时任务开始 report，清空 map
+map.clear();  // 刚好线程 A 的写入被覆盖或丢失
+</code></pre>
+<h3 id="场景2定时任务统计的数据可能不完整">场景2：定时任务统计的数据可能不完整</h3>
+<ul>
+<li>比如你每 10 秒上报一次 map 中的调用量</li>
+<li>在第 9 秒，有用户请求正在更新 map，此时定时器开始读取和清空 map</li>
+<li>这个“正在进行的请求”的数据，可能：
+<ul>
+<li><strong>被读到一半</strong>（数据不一致）</li>
+<li><strong>被清空还没写完</strong>（丢失）</li>
+</ul>
+</li>
+</ul>
+<h3 id="场景3mapsize-还没变但内容已经变了读到脏数据">场景3：map.size() 还没变，但内容已经变了（读到脏数据）</h3>
+<h1 id="四-使用双-map的好处">四、使用“双 Map”的好处</h1>
+<h3 id="核心思想写读分离互不干扰">核心思想：<strong>写读分离，互不干扰</strong></h3>
+<ul>
+<li>
+<p>两个 Map：<code>mapA</code>, <code>mapB</code></p>
+</li>
+<li>
+<p><code>activeMap</code>：当前写入使用的 Map</p>
+</li>
+<li>
+<p>每次定时任务</p>
+<pre><code>report()
+</code></pre>
+<p>时：</p>
+<ul>
+<li>切换 <code>activeMap</code> 指针：从 A → B（或 B → A）</li>
+<li>新的请求都写入新的 Map（例如 B）</li>
+<li>定时任务可以安心地读取并清空旧的 Map（A）</li>
+</ul>
+</li>
+</ul>
+<h3 id="效果">效果：</h3>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据一致</td>
+<td>report 期间不再写入旧 Map，避免数据丢失或读到脏数据</td>
+</tr>
+<tr>
+<td>线程安全</td>
+<td>没有必要加锁，也不会影响写入线程</td>
+</tr>
+<tr>
+<td>性能更高</td>
+<td>写线程和读线程互不干扰，系统吞吐量提升明显</td>
+</tr>
+</tbody>
+</table>
+<h1 id="五-为什么定时上报之后还必须清空统计数据">五、为什么定时上报之后还必须清空统计数据？</h1>
+<h2 id="一-系统设计目标回顾">一、系统设计目标回顾</h2>
+<p>设计的是一个<strong>调用量统计系统</strong>，目标是：</p>
+<blockquote>
+<p>实时记录各调用方对各接口的调用次数，并<strong>定时上报</strong>到 MQ 或日志系统进行存储/分析/展示。</p>
+</blockquote>
+<p>而这个“调用次数”其实是<strong>一个时间段内的增量数据</strong>（例如过去10秒的调用量），并不是一个永久累计值。</p>
+<h2 id="二-为什么上报后必须清空数据">二、为什么上报后必须清空数据？</h2>
+<h3 id="1-避免重复上报">1. <strong>避免重复上报</strong></h3>
+<ul>
+<li>如果不上报后清空数据，Map 中的计数会一直累加。</li>
+<li>下一次上报时，仍然是<strong>累计总数</strong>。</li>
+<li>那每次上报的都是重复的数据，<strong>监控图表/日志分析就会错误</strong>。</li>
+</ul>
+<p>比如：</p>
+<table>
+<thead>
+<tr>
+<th>时间点</th>
+<th>实际调用数</th>
+<th>累计值（如果不清空）</th>
+<th>上报值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第10秒</td>
+<td>100次</td>
+<td>100</td>
+<td>100</td>
+</tr>
+<tr>
+<td>第20秒</td>
+<td>50次</td>
+<td>150</td>
+<td>❌150（应该是50）</td>
+</tr>
+<tr>
+<td>第30秒</td>
+<td>30次</td>
+<td>180</td>
+<td>❌180（应该是30）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-节省内存空间">2. <strong>节省内存空间</strong></h3>
+<ul>
+<li>每次调用都在向 Map 中写入数据。</li>
+<li>如果不清空 Map，数据会无限增长，最终导致：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>内存泄漏</td>
+<td>系统内存越来越大，GC 压力加剧，甚至 OOM</td>
+</tr>
+<tr>
+<td>冗余数据</td>
+<td>Map 中可能保留了早就没用的接口/调用方数据</td>
+</tr>
+</tbody>
+</table>
+<p>清空后，Map 是“干净”的，下一轮统计可以轻松开始。</p>
+<h3 id="3-符合时间窗口统计的设计理念">3. <strong>符合“时间窗口统计”的设计理念</strong></h3>
+<ul>
+<li>统计系统实际上在模拟一个“滑动窗口”或“时间窗口”的统计逻辑。</li>
+<li>每次上报的是过去 X 秒的数据（比如 10 秒）。</li>
+<li>如果不清空，数据就会跨窗口重叠，破坏统计精度。</li>
+</ul>
+<h2 id="三-如果不清空会发生什么问题">三、如果<strong>不清空</strong>会发生什么问题？</h2>
+<table>
+<thead>
+<tr>
+<th>问题类型</th>
+<th>描述</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据重复</td>
+<td>每次上报的数据包含上次的内容</td>
+<td>上层系统误以为调用量持续暴涨</td>
+</tr>
+<tr>
+<td>内存积压</td>
+<td>Map 数据不断累积</td>
+<td>内存使用量增长，GC频繁甚至OOM</td>
+</tr>
+<tr>
+<td>统计错误</td>
+<td>指标不再代表过去 10 秒，而是整个生命周期</td>
+<td>图表变成斜线，不再有波动性</td>
+</tr>
+<tr>
+<td>流量预测不准</td>
+<td>会把过去所有历史调用算进来</td>
+<td>告警、限流等都会被误触发</td>
+</tr>
+</tbody>
+</table>
+<h2 id="四-有没有不清空的情况">四、有没有不清空的情况？</h2>
+<p>有，但前提是<strong>设计的不是“增量上报”，而是“全量状态上报”</strong>。比如：</p>
+<ul>
+<li>是一个长期总调用次数的记录系统（如累加 PV）</li>
+<li>每次上报前后都保存上一次的快照，取“当前值 - 上次值”作为增量</li>
+</ul>
+<p>这种方式需要更复杂的状态管理，远不如清空来得直接、简洁、可靠。</p>
+<h1 id="update方法实现细节">update()方法实现细节</h1>
+<p>首先有一个业务背景，接口的调用量是很大的，所以update()方法的并发量是很高的，而report()方法的调用量就比较低，仅仅被内部的ScheuleExecutorService定时任务线程池调用，每隔一定的时间上报到MQ中，所以这就要求update()方法具有很高的性能。而基本实现有三种方式，分别为synchronized + HashMap、 ConcurrentHashMap + get+put、ConcurrentHashMap + merge()。</p>
+<h2 id="调研结论">调研结论</h2>
+<table>
+<thead>
+<tr>
+<th>操作方式</th>
+<th>吞吐 TPS</th>
+<th>延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>synchronized + HashMap</td>
+<td>低（&lt;3w）</td>
+<td>高</td>
+</tr>
+<tr>
+<td>ConcurrentHashMap + get+put</td>
+<td>中等（5w~6w）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>ConcurrentHashMap + merge()</td>
+<td>高（&gt;10w）</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1-synchronized-hashmap">1. synchronized + HashMap</h3>
+<ul>
+<li>单线程安全，依赖锁，线程阻塞严重。</li>
+<li><strong>适用于低并发环境</strong>，在高并发下锁竞争激烈。</li>
+</ul>
+<h3 id="2-concurrenthashmap-getput">2. ConcurrentHashMap + get+put</h3>
+<ul>
+<li>get -&gt; 判断有无 -&gt; put（需要显式处理并发问题）</li>
+<li>存在 <strong>竞态条件问题</strong>，需要再做 <code>computeIfAbsent</code> 或加锁，性能一般。</li>
+</ul>
+<h3 id="3-concurrenthashmap-merge">3. ConcurrentHashMap + merge()</h3>
+<ul>
+<li>是线程安全的原子操作，封装了 get + put + update 的过程。</li>
+<li>没有显式加锁，<strong>性能最佳</strong>，最适合高并发统计场景。</li>
+</ul>
+<pre><code class="language-java">map.merge(key, 1L, Long::sum)
+</code></pre>
+<p>意思是：如果 key 存在就自增，否则初始化为 1。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Elasticsearch]]></title>
+        <id>https://shengwei42.github.io/post/elasticsearch/</id>
+        <link href="https://shengwei42.github.io/post/elasticsearch/">
+        </link>
+        <updated>2025-06-27T01:45:51.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="什么是elasticsearch">什么是elasticsearch</h1>
+<p>elasticsearch是一款非常强大的开源搜索引擎技术，可以帮助我们从海量数据中快速找到需要的内容。</p>
+<ol>
+<li>elasticsearch是elastic stack的核心，负责存储、搜索、分析数据。elasticsearch底层实现是基于Lucene技术</li>
+<li>Kibana是数据可视化的组件，也就是展示搜索出来的数据。</li>
+<li>Logstash、Beats是负责数据抓取的组件。Lucene是一个Java语言的搜索引擎类库(其实就是一个jar包），是Apache公司的顶级项目，由DougCutting于1999年研发。Lucene官网：https：//lucene.apache.org<br>
+Lucene的优势<br>
+● 易扩展<br>
+● 高性能(基于倒排索引)<br>
+Lucene的缺点<br>
+● 只限于Java语言开发<br>
+● 学习曲线陡峭，也就是API复杂不利于学习<br>
+● 不支持水平扩展，只负责如何实现搜索，不支持高并发、集群扩展<br>
+由于Lucene的缺点，诞生出了elasticsearch，与Lucene相比，elasticsearch（基于Lucene，且Compass是elasticsearch的前身)具有以下优点：<br>
+● 支持分布式，可水平扩展<br>
+● 提供Restful接口，可被任何语言调用<br>
+● elasticsearch的核心技术是倒排索引。</li>
+</ol>
+<h1 id="倒排索引">倒排索引</h1>
+<p>传统数据库（例如MvSQL）采用正向索引，例如给下表(tb_goods)中的id创建索引：<br>
+id	Title	Price<br>
+1	小米手机	3499<br>
+2	华为手机	5999<br>
+3	华为小米充电器	39<br>
+4	小米手环	49<br>
+...	...	...<br>
+搜索手机：select * from tb_goods where title like '%手机%';<br>
+需要逐条数据扫描，判断是否包含‘手机’，是的话才会存入结果集，否则丢弃。虽然最后能找到满足条件的数据，但是一条条数据进行比对，太低效，如果数据量庞大，那么搜索效率就会成为瓶颈，这就是正向索引的弊端。<br>
+elasticsearch采用倒排索引，例如给上表(tb_goods)中的id创建索引：<br>
+词条(term)	文档id<br>
+小米	1，3，4<br>
+手机	1，2<br>
+华为	2，3<br>
+充电器	3<br>
+手环	4<br>
+文档（document）：每条数据就是一个文档<br>
+词条（term）：文档按照语义分成的词语<br>
+搜索‘华为手机’，流程：</p>
+<ol>
+<li>分词，得到：‘华为’、‘手机’两个词条</li>
+<li>去词条列表查询文档id，得到每个词条所在文档id：华为：2，3；手机：1，2</li>
+<li>根据文档id查询文档，得到id为1，2，3的文档<br>
+总结<br>
+1、正向索引：基于文档id来创建索引。查询词条时必须先找到文档，而后判断是否包含词条<br>
+2、倒排索引：对文档内容进行分词，对词条创建索引1，并记录词条所在文档的信息。查询时先根据词条去查询文<br>
+档id，然后获取到文档</li>
+</ol>
+<h1 id="elasticsearch对比mysql">elasticsearch对比mysql</h1>
+<p>elasticsearch是面向文档存储的，可以是数据库中的一条商品数据，一个订单信息。注意elasticsearch的文档是以json形式存储的，也就是说，我们把数据(也叫文档)存储进elasticsearch时，这些文档数据就会自动被序列化为json格式，然后才存储进elasticsearch<br>
+MySQL	Elasticsearch	说明<br>
+Table	Index	索引(index)，就是文档的集合，类似数据库的表(table)<br>
+Row	Document	文档(Document)，就是一条条的数据，类似数据库中的行(Row)。这里的文档都是JSON格式<br>
+Column	Field	字段(Field)，就是JSON文档中的字段，类似数据库中的列(Column)<br>
+Schema	Mapping	Mapping(映射)是索引中文档的约束，例如字段类型约束。类似数据库的表结构(Schema)<br>
+SQL	DSL	DSL是elasticsearch提供的JSON风格的请求语句，用来操作elasticsearch，实现CRUD<br>
+1、MySQL： 擅长事务类型的操作，可以确保数据的安全和一致性。一般用于增删改<br>
+2、Elasticsearch： 擅长海量数据的搜索、分析、计算。一般用于查询<br>
+两者是互补关系，不是替代关系，因此在业务系统架构中，两者都会存在，让用户在MySQL里面增删改数据，然后MySQL把数据同步给elasticsearch，用户要查询的时候，就在elasticsearch里面进行查询</p>
+<h1 id="安装elasticsearch">安装elasticsearch</h1>
+<p>安装elasticsearch，简称es<br>
+第一步： 创建网络。因为我们还需要部署kibana容器，因此需要让es和kibana容器互联<br>
+systemctl start docker#启动docker服务<br>
+docker networkcreatees-net#创建一个网络，名字是es-net<br>
+第二步： 加载es镜像。采用elasticsearch的7.12.1版本的镜像，这个镜像体积有800多MB，所以需要在Windows上下载链接安装包，下载下来是一个es的镜像tar包，然后传到CentOS7的/root目录<br>
+第三步： 把在CentOS7的/root目录的es镜像，导入到docker<br>
+docker load -i es.tar<br>
+第四步： 创建并运行es容器，容器名称就叫es。在docker(也叫Docker大容器、Docker主机、宿主机)，根据es镜像来创建es容器<br>
+docker run -d<br>
+--name es<br>
+-e &quot;ES_JAVA_0PTS=-Xms512m -Xmx512m&quot;<br>
+-e &quot;discovery.type=single-node&quot;<br>
+-V es-data：/usr/share/elasticsearch/data<br>
+-V es-plugins：/usr/share/elasticsearch/plugins<br>
+--privileged <br>
+--network es-net<br>
+-p 9200：9200<br>
+-p 9300：9300<br>
+elasticsearch：7.12.1<br>
+命令解释：<br>
+● -e &quot;cluster.name=es-docker-cluster&quot;：设置集群名称<br>
+● -e &quot;http.host=0.0.0.0&quot;：监听的地址，可以外网访问<br>
+● -e &quot;ES_JAVA_OPTS=-Xms512m -Xmx512m&quot;：内存大小，不能低于512<br>
+● -e &quot;discovery.type=single-node&quot;：运行模式，例如非集群模式<br>
+● -v es-data：/usr/share/elasticsearch/data：挂载数据卷，绑定es的数据目录<br>
+● -v es-logs：/usr/share/elasticsearch/logs：挂载数据卷，绑定es的日志目录<br>
+● -v es-plugins：/usr/share/elasticsearch/plugins：挂载数据卷，绑定es的插件目录<br>
+● --privileged：授予数据卷访问权<br>
+● --network es-net ：加入一个名为es-net的网络中<br>
+● -p 9200：9200：端口映射配置，向外暴露的http请求端口，用于用户访问<br>
+● -p 9300：9300：端口映射配置，是es容器各个节点之间互相访问的端口，由于我们是单节点部署，所以用不到<br>
+● elasticsearch：7.12.1： 镜像名称，要把哪个镜像创建为容器，注意带版本号<br>
+然后，在浏览器中输入：http：//你的ip地址：9200 即可看到elasticsearch的响应结果</p>
+<p>安装kibana<br>
+kibana 的作用： 让我们非常方便的去编写elasticsearch中的DSL语句，从而去操作elasticsearch<br>
+第一步： 确保docker是启动的<br>
+第二步： 加载kibana镜像。这个镜像体积有1.04G，所以需要在Windows上下载链接安装包，下载下来是一个kibana.tar文件，然后传到CentOS7的/root目录<br>
+第三步： 把在CentOS7的/root目录的kibana镜像，导入到docker<br>
+docker load -i kibana.tar<br>
+第四步： 创建并运行kibana容器，容器名称就叫kibana。在docker(也叫Docker大容器、Docker主机、宿主机)，根据kibana镜像来创建kibana容器<br>
+docker run -d<br>
+--name kibana<br>
+-e ELASTICSEARCH_H0STS=http：//es：9200<br>
+--network=es-net<br>
+-p 5601：5601<br>
+kibana：7.12.1<br>
+#--name：指定容器的名字，例如kibana<br>
+#--networkes-net：加入一个名为es-net的网络中，与elasticsearch在同一个网络中<br>
+#-eELASTICSEARCH_HOSTS：由于kibana和es会被我们设置在同一个网络，所以这里的kibana可以通过容器名直接访问es，es的容器名我们在#上一节设置的是es<br>
+#-e ELASTICSEARCH_HOSTS：设置elasticsearch的地址，因为kibana已经与elasticsearch在一个网络，因此可以用容器名直接访问#elasticsearch<br>
+#-p5601：5601：端口映射配置，向外暴露的http请求端口，用于用户访问<br>
+第五步： kibana启动一般比较慢，需要多等待一会，可以通过命令<br>
+dockerlogs-fkibana#查看运行日志，当查看到下面的日志，说明成功<br>
+第六步： 测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果</p>
+<p>安装IK分词器<br>
+IK分词器官网： https：//github.com/medcl/elasticsearch-analysis-ik。注意elasticsearch、kibana、IK分词器，这三者通常是一起使用的<br>
+es在创建倒排索引时，需要对文档进行分词。在搜索时，需要对用户输入的内容进行分词。但默认的分词规则不支持中文处理，默认是只支持对英文进行分词，但是在正常业务中，我们需要处理的文档大多是中文，所以我们需要对中文进行分词，所以就需要安装IK分词器</p>
+<ol>
+<li>第一步： 我们在 '安装elasticsearch' 创建elasticsearch容器时，指定了数据卷目录，其中有个数据卷指定了自定义名称为es-plugins，表示存放插件的数据卷，我们使用inspect命令把es-plugins数据卷的路径信息查询出来</li>
+<li>第二步： 下载ik.zip压缩包到Windows，下载后解压出来是ik文件夹，根据上面查询出来的es-plugins数据卷的路径，把ik文件夹上传到CentOS7的 /var/lib/docker/volumes/es-plugins/_data 目录</li>
+<li>第三步： 重启elasticsearch容器，我们在 '安装elasticsearch' 创建elasticsearch容器时，指定了自定义容器名称为es</li>
+<li>第四步： 查看elasticsearch容器的启动日志</li>
+<li>第五步： 确保elasticsearch、kibana已正常运行</li>
+<li>第六步： 测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果<br>
+IK分词器包含两种模式：<br>
+● ik_smart：最少切分，根据语义分词，正常分词<br>
+● ik_max_word：最细切分，也是根据语义分词，分的词语更多，更细<br>
+IK分词器的词典扩展和停用<br>
+Ik分词器的分词，底层是一个字典，在字典里面会有各种各样的词语，当ik分词器需要对分词文本进行分词时，ik分词器就会拿着这个文本(乱拆成多个词或词语)，一个个去字典里面匹配，如果能匹配到，证明某个词(乱拆成多个词或词语)是词，就把这个证明后的词分出来，作为一个词。<br>
+第一个问题： 字典的分词效果是有限的，只能对日常生活中常见的语义相关的词，进行分词，由于字典的词汇量少，所以我们需要对字典进行扩展。<br>
+第二个问题： 字典的分词效果往往存在违禁词，我们不希望IK分词器能匹配并成功把词典里的违禁词作为分词，解决： 禁用某些敏感词条<br>
+解决：<br>
+1、要拓展或禁用ik分词器的词库，只需要修改一个分词器目录中的config目录中的IKAnalyzer.cfg.xml文件<br>
+2、在config目录新建myext.dic文件，写入自己想要的特定词，也就是扩展词。新建mystopword.dic文件，写入自己想要禁用的特定词，也就是不参与分词的词<br>
+3、重新启动elasticsearch、kibana<br>
+4、测试。在浏览器中输入：http：//你的ip地址：5601 即可看到elasticsearch的响应结果</li>
+</ol>
+<h1 id="es-dsl操作文档">ES-DSL操作文档</h1>
+<ol>
+<li>
+<p>mapping属性<br>
+mapping属性的官方文档： https：//elastic.co/guide/en/elasticsearch/reference/current/index.html<br>
+MySQL	Elasticsearch	说明<br>
+Table	Index	索引(index)，就是文档的集合，类似数据库的表(table)<br>
+Row	Document	文档(Document)，就是一条条的数据，类似数据库中的行(Row)。这里的文档都是JSON格式<br>
+Column	Field	字段(Field)，就是JSON文档中的字段，类似数据库中的列(Column)<br>
+Schema	Mapping	Mapping(映射)是索引中文档的约束，例如字段类型约束。类似数据库的表结构(Schema)<br>
+SQL	DSL	DSL是elasticsearch提供的JSON风格的请求语句，用来操作elasticsearch，实现CRUD<br>
+mapping是对索引库中文档(es中的文档是json风格)的约束，常见的mapping属性包括如下<br>
+● type：字段数据类型<br>
+○ 字符串(分两种)： text（可分词的文本）、keyword（精确值，例如：品牌、国家、ip地址等不可分词的词语）<br>
+○ 数值： long、integer、short、byte、double、float<br>
+○ 布尔： boolean<br>
+○ 日期： date<br>
+○ 对象：object<br>
+● index：是否创建倒排索引，默认为true(也就是可参与分词搜索)，改成false的话，别人就搜索不到你<br>
+● analyzer：分词器，当字段类型是text时必须指定分词器。如果字段类型是keyword，那么不需要指定分词器<br>
+● properties：子字段，也就是属性和子属性</p>
+</li>
+<li>
+<p>创建索引库<br>
+创建索引库和mapping的DSL语法如下，需通过Kibana的Dev Tools（访问http：//你的ip地址：5601）发送请求。以下是一个完整的示例：<br>
+PUT /索引库名<br>
+{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // text类型，指定中文分词器<br>
+&quot;age&quot;： { &quot;type&quot;： &quot;integer&quot; }, // 数值类型<br>
+&quot;email&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值，不分词<br>
+&quot;address&quot;： {<br>
+&quot;type&quot;： &quot;object&quot;, // 对象类型<br>
+&quot;properties&quot;： {<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;street&quot;： { &quot;type&quot;： &quot;text&quot; }<br>
+}<br>
+},<br>
+&quot;is_active&quot;： { &quot;type&quot;： &quot;boolean&quot;, &quot;index&quot;： true } // 布尔类型，可搜索<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● 确保删除注释后再发送请求。<br>
+● analyzer 只对text类型字段有效，中文场景建议使用ik_max_word（需安装IK分词器）。<br>
+● 如果索引已存在，重复创建会报错。</p>
+</li>
+<li>
+<p>查询、修改、删除索引库</p>
+</li>
+<li>
+<p>查询索引库语法<br>
+● 查询所有索引：<br>
+GET /_cat/indices?v<br>
+返回所有索引的详细信息，包括状态、文档数量等。<br>
+● 查询指定索引的mapping：<br>
+GET /索引库名/_mapping<br>
+返回索引库名索引的mapping定义。</p>
+</li>
+<li>
+<p>往索引库添加新字段<br>
+索引库的mapping无法直接修改，但可以添加新字段。语法如下：<br>
+PUT /索引库名/_mapping<br>
+{<br>
+&quot;properties&quot;： {<br>
+&quot;new_field&quot;： {<br>
+&quot;type&quot;： &quot;keyword&quot;<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● 新字段名不能与已有字段重复，否则报错。<br>
+● 已有的字段类型无法修改（如text不能改为keyword）。</p>
+</li>
+<li>
+<p>删除索引库语法<br>
+删除指定索引库：<br>
+DELETE /索引库名<br>
+注意：<br>
+● 删除操作不可恢复，谨慎使用。<br>
+● 如果索引不存在，ES会返回错误。</p>
+</li>
+<li>
+<p>新增、查询、删除文档</p>
+</li>
+<li>
+<p>新增文档的DSL语法<br>
+添加文档到指定索引库，文档ID可手动指定或由ES自动生成：<br>
+POST /索引库名/_doc/1<br>
+{<br>
+&quot;name&quot;： &quot;张三&quot;,<br>
+&quot;age&quot;： 25,<br>
+&quot;email&quot;： &quot;zhangsan@example.com&quot;,<br>
+&quot;address&quot;： {<br>
+&quot;city&quot;： &quot;北京&quot;,<br>
+&quot;street&quot;： &quot;朝阳路&quot;<br>
+},<br>
+&quot;is_active&quot;： true<br>
+}<br>
+注意：<br>
+● 如果省略文档ID（如用POST /索引库名/_doc），ES会生成随机ID。<br>
+● 建议手动指定ID，便于后续操作。</p>
+</li>
+<li>
+<p>查询文档<br>
+查询指定文档：<br>
+GET /索引库名/_doc/1<br>
+返回文档内容，包括_source字段中的JSON数据。</p>
+</li>
+<li>
+<p>删除文档<br>
+删除指定文档：<br>
+DELETE /索引库名/_doc/1<br>
+注意：<br>
+● 删除后不可恢复。<br>
+● 如果文档ID不存在，ES会返回not_found。</p>
+</li>
+<li>
+<p>修改文档<br>
+方式一：全量修改<br>
+全量修改会覆盖旧文档，等同于删除旧文档并添加新文档。语法如下：<br>
+PUT /索引库名/_doc/1<br>
+{<br>
+&quot;name&quot;： &quot;张三&quot;,<br>
+&quot;age&quot;： 26, // 修改年龄<br>
+&quot;email&quot;： &quot;zhangsan@example.com&quot;,<br>
+&quot;address&quot;： {<br>
+&quot;city&quot;： &quot;北京&quot;,<br>
+&quot;street&quot;： &quot;朝阳路&quot;<br>
+},<br>
+&quot;is_active&quot;： true<br>
+}<br>
+注意：<br>
+● 必须包含所有字段，否则未指定的字段会被删除。<br>
+● 如果文档ID不存在，此操作会变为新增。<br>
+方式二：增量修改<br>
+只修改指定字段的值，保留其他字段不变。语法如下：<br>
+POST /索引库名/_update/1<br>
+{<br>
+&quot;doc&quot;： {<br>
+&quot;age&quot;： 26 // 只修改年龄<br>
+}<br>
+}<br>
+注意：<br>
+● 使用_update接口，仅更新指定字段。<br>
+● 如果文档ID不存在，此操作会变为新增（需确保mapping支持新字段）。</p>
+</li>
+</ol>
+<h1 id="es-restclient操作文档">ES-RestClient操作文档</h1>
+<ol>
+<li>
+<p>Ascertaining RestClient Case Preparation<br>
+● 第一步：在数据库软件（如 MySQL）中导入 tb_hotel.sql，确保数据库中包含酒店数据表 tb_hotel，字段包括 id, name, brand, address, price, star, city, latitude, longitude 等。<br>
+● 第二步：解压 hotel-demo.zip，在 IntelliJ IDEA 中打开 hotel-demo 项目。<br>
+● 第三步：修改 application.yml，配置数据库连接信息，例如：<br>
+spring：<br>
+datasource：<br>
+url： jdbc：mysql：//localhost：3306/your_database<br>
+username： your_username<br>
+password： your_password</p>
+</li>
+<li>
+<p>Hotel 数据结构分析<br>
+MySQL 数据结构（基于 tb_hotel.sql）：<br>
+字段名	数据类型	说明<br>
+id	BIGINT	主键，酒店ID<br>
+name	VARCHAR	酒店名称<br>
+brand	VARCHAR	酒店品牌<br>
+address	VARCHAR	酒店地址<br>
+price	DECIMAL	价格<br>
+star	INT	星级<br>
+city	VARCHAR	城市<br>
+latitude	DECIMAL	纬度<br>
+longitude	DECIMAL	经度<br>
+Elasticsearch Mapping（基于 MySQL 结构）：<br>
+{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;id&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值，不分词<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // 可分词，中文分词器<br>
+&quot;brand&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值<br>
+&quot;address&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; }, // 可分词<br>
+&quot;price&quot;： { &quot;type&quot;： &quot;double&quot; }, // 浮点数<br>
+&quot;star&quot;： { &quot;type&quot;： &quot;integer&quot; }, // 整数<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; }, // 精确值<br>
+&quot;location&quot;： { &quot;type&quot;： &quot;geo_point&quot; } // 经纬度合并为 geo_point 类型<br>
+}<br>
+}<br>
+}<br>
+注意：<br>
+● latitude 和 longitude 合并为 location 字段，使用 geo_point 类型，格式为 { &quot;lat&quot;： 纬度, &quot;lon&quot;： 经度 }。<br>
+● 中文字段（如 name, address）使用 IK 分词器（需安装）。<br>
+● index： true 为默认值，可省略。</p>
+</li>
+<li>
+<p>初始化 RestClient<br>
+第一步：在 pom.xml 添加依赖：<br>
+<dependency><br>
+<groupId>org.elasticsearch.client</groupId><br>
+<artifactId>elasticsearch-rest-high-level-client</artifactId><br>
+<version>7.17.3</version><br>
+</dependency></p>
+</li>
+</ol>
+<p>第二步：在 src/test/java/cn/itcast/hotel/HotelIndexTest.java 创建测试类：<br>
+package cn.itcast.hotel;</p>
+<p>import org.apache.http.HttpHost;<br>
+import org.elasticsearch.client.RestClient;<br>
+import org.elasticsearch.client.RestHighLevelClient;<br>
+import org.junit.jupiter.api.AfterEach;<br>
+import org.junit.jupiter.api.BeforeEach;<br>
+import org.junit.jupiter.api.Test;</p>
+<p>public class HotelIndexTest {<br>
+private RestHighLevelClient client;</p>
+<pre><code>@BeforeEach
+void setUp() {
+    this.client = new RestHighLevelClient(
+        RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200, &quot;http&quot;))
+    );
+}
+
+@AfterEach
+void tearDown() throws Exception {
+    this.client.close();
+}
+
+@Test
+void testInit() {
+    System.out.println(client);
+}
+</code></pre>
+<p>}<br>
+第三步：确保以下服务在 CentOS 7 上运行：<br>
+● Elasticsearch（端口 9200）<br>
+● MySQL（端口 3306）<br>
+● （可选）Kibana（端口 5601）<br>
+第四步：运行 testInit 方法，验证 RestClient 初始化成功。</p>
+<ol start="4">
+<li>创建索引库<br>
+第一步：在 src/main/java/cn/itcast/hotel/constants/HotelConstants.java 定义 DSL 语句：<br>
+package cn.itcast.hotel.constants;</li>
+</ol>
+<p>public class HotelConstants {<br>
+public static final String MAPPING_TEMPLATE = &quot;{<br>
+&quot;mappings&quot;： {<br>
+&quot;properties&quot;： {<br>
+&quot;id&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;name&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; },<br>
+&quot;brand&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;address&quot;： { &quot;type&quot;： &quot;text&quot;, &quot;analyzer&quot;： &quot;ik_max_word&quot; },<br>
+&quot;price&quot;： { &quot;type&quot;： &quot;double&quot; },<br>
+&quot;star&quot;： { &quot;type&quot;： &quot;integer&quot; },<br>
+&quot;city&quot;： { &quot;type&quot;： &quot;keyword&quot; },<br>
+&quot;location&quot;： { &quot;type&quot;： &quot;geo_point&quot; }<br>
+}<br>
+}<br>
+}&quot;;<br>
+}<br>
+第二步：在 HotelIndexTest.java 添加创建索引方法：<br>
+@Test<br>
+void createHotelIndex() throws IOException {<br>
+CreateIndexRequest request = new CreateIndexRequest(&quot;gghotel&quot;);<br>
+request.source(HotelConstants.MAPPING_TEMPLATE, XContentType.JSON);<br>
+client.indices().create(request, RequestOptions.DEFAULT);<br>
+}<br>
+第三步：确保 Elasticsearch 在 CentOS 7 上运行。<br>
+第四步：运行 createHotelIndex 方法，创建 gghotel 索引。<br>
+第五步：通过 Kibana 验证索引是否存在：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 在 Dev Tools 输入：<br>
+GET /_cat/indices/gghotel?v</p>
+<ol start="5">
+<li>
+<p>删除和判断索引库</p>
+</li>
+<li>
+<p>删除索引库<br>
+在 HotelIndexTest.java 添加：<br>
+@Test<br>
+void testDeleteHotelIndex() throws IOException {<br>
+DeleteIndexRequest request = new DeleteIndexRequest(&quot;gghotel&quot;);<br>
+client.indices().delete(request, RequestOptions.DEFAULT);<br>
+}<br>
+运行 testDeleteHotelIndex 方法，删除 gghotel 索引。</p>
+</li>
+<li>
+<p>判断索引库是否存在<br>
+在 HotelIndexTest.java 添加：<br>
+@Test<br>
+void testExistsHotelIndex() throws IOException {<br>
+ExistsRequest request = new ExistsRequest(&quot;gghotel&quot;);<br>
+boolean exists = client.indices().exists(request, RequestOptions.DEFAULT);<br>
+System.out.println(exists ? &quot;索引库存在&quot; ： &quot;索引库不存在&quot;);<br>
+}<br>
+运行 testExistsHotelIndex 方法，检查 gghotel 索引是否存在。</p>
+</li>
+<li>
+<p>新增文档<br>
+● Hotel.java（pojo 目录，数据库交互）：<br>
+package cn.itcast.hotel.pojo;</p>
+</li>
+</ol>
+<p>import lombok.Data;</p>
+<p>@Data<br>
+public class Hotel {<br>
+private Long id;<br>
+private String name;<br>
+private String brand;<br>
+private String address;<br>
+private Double price;<br>
+private Integer star;<br>
+private String city;<br>
+private Double latitude;<br>
+private Double longitude;<br>
+}<br>
+● HotelDoc.java（pojo 目录，ES 交互）：<br>
+package cn.itcast.hotel.pojo;</p>
+<p>import lombok.Data;</p>
+<p>@Data<br>
+public class HotelDoc {<br>
+private Long id;<br>
+private String name;<br>
+private String brand;<br>
+private String address;<br>
+private Double price;<br>
+private Integer star;<br>
+private String city;<br>
+private Map&lt;String, Double&gt; location; // { &quot;lat&quot;： 纬度, &quot;lon&quot;： 经度 }</p>
+<pre><code>public HotelDoc(Hotel hotel) {
+    this.id = hotel.getId();
+    this.name = hotel.getName();
+    this.brand = hotel.getBrand();
+    this.address = hotel.getAddress();
+    this.price = hotel.getPrice();
+    this.star = hotel.getStar();
+    this.city = hotel.getCity();
+    this.location = new HashMap&lt;&gt;();
+    this.location.put(&quot;lat&quot;, hotel.getLatitude());
+    this.location.put(&quot;lon&quot;, hotel.getLongitude());
+}
+</code></pre>
+<p>}<br>
+● IHotelService.java（service 目录）：<br>
+public interface IHotelService extends IService<Hotel> {<br>
+}<br>
+● HotelService.java（service/impl 目录）：实现 IHotelService，使用 MyBatis-Plus 查询数据库。<br>
+具体操作：<br>
+第一步：在 src/test/java/cn/itcast/hotel/HotelDocumentTest.java 创建测试类：<br>
+package cn.itcast.hotel;</p>
+<p>import cn.itcast.hotel.pojo.Hotel;<br>
+import cn.itcast.hotel.pojo.HotelDoc;<br>
+import cn.itcast.hotel.service.IHotelService;<br>
+import com.fasterxml.jackson.databind.ObjectMapper;<br>
+import org.elasticsearch.action.index.IndexRequest;<br>
+import org.elasticsearch.client.RequestOptions;<br>
+import org.elasticsearch.client.RestHighLevelClient;<br>
+import org.elasticsearch.common.xcontent.XContentType;<br>
+import org.junit.jupiter.api.AfterEach;<br>
+import org.junit.jupiter.api.BeforeEach;<br>
+import org.junit.jupiter.api.Test;<br>
+import org.springframework.beans.factory.annotation.Autowired;<br>
+import org.springframework.boot.test.context.SpringBootTest;</p>
+<p>@SpringBootTest<br>
+public class HotelDocumentTest {<br>
+@Autowired<br>
+private RestHighLevelClient client;<br>
+@Autowired<br>
+private IHotelService hotelService;</p>
+<pre><code>private final ObjectMapper mapper = new ObjectMapper();
+
+@BeforeEach
+void setUp() {
+    this.client = new RestHighLevelClient(
+        RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200, &quot;http&quot;))
+    );
+}
+
+@AfterEach
+void tearDown() throws Exception {
+    this.client.close();
+}
+
+@Test
+void testAddDocument() throws IOException {
+    Hotel hotel = hotelService.getById(61083L);
+    HotelDoc hotelDoc = new HotelDoc(hotel);
+    IndexRequest request = new IndexRequest(&quot;gghotel&quot;).id(hotelDoc.getId().toString());
+    request.source(mapper.writeValueAsString(hotelDoc), XContentType.JSON);
+    client.index(request, RequestOptions.DEFAULT);
+}
+</code></pre>
+<p>}<br>
+第二步：运行 testAddDocument，将 ID 为 61083 的酒店数据导入 gghotel 索引。<br>
+第三步：通过 Kibana 验证：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 输入：<br>
+GET /gghotel/_doc/61083</p>
+<ol start="7">
+<li>
+<p>查询文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testGetDocumentById() throws IOException {<br>
+GetRequest request = new GetRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+GetResponse response = client.get(request, RequestOptions.DEFAULT);<br>
+if (response.isExists()) {<br>
+HotelDoc hotelDoc = mapper.readValue(response.getSourceAsString(), HotelDoc.class);<br>
+System.out.println(hotelDoc);<br>
+} else {<br>
+System.out.println(&quot;文档不存在&quot;);<br>
+}<br>
+}<br>
+第二步：运行 testGetDocumentById，查询 ID 为 61083 的文档并反序列化为 HotelDoc 对象。</p>
+</li>
+<li>
+<p>修改文档<br>
+第一步：在 HotelDocumentTest.java 添加增量修改：<br>
+@Test<br>
+void testUpdateDocument() throws IOException {<br>
+UpdateRequest request = new UpdateRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();<br>
+map.put(&quot;price&quot;, 888.88); // 仅修改价格<br>
+request.doc(map);<br>
+client.update(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testGetDocumentById，查看 ID 为 61083 的文档原始数据。<br>
+第三步：运行 testUpdateDocument，修改价格。<br>
+第四步：再次运行 testGetDocumentById，验证价格是否改为 888.88。<br>
+注意：<br>
+● 增量修改只更新指定字段（如 price），其他字段不变。<br>
+● 如果文档不存在，会变为新增（需确保 mapping 支持新字段）。</p>
+</li>
+<li>
+<p>删除文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testDeleteDocument() throws IOException {<br>
+DeleteRequest request = new DeleteRequest(&quot;gghotel&quot;, &quot;61083&quot;);<br>
+client.delete(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testGetDocumentById，确认 ID 为 61083 的文档存在。<br>
+第三步：运行 testDeleteDocument，删除 ID 为 61083 的文档。<br>
+第四步：再次运行 testGetDocumentById，验证文档是否已删除（应返回“文档不存在”）。</p>
+</li>
+<li>
+<p>批量导入文档<br>
+第一步：在 HotelDocumentTest.java 添加：<br>
+@Test<br>
+void testBulkRequest() throws IOException {<br>
+List<Hotel> hotels = hotelService.list();<br>
+BulkRequest request = new BulkRequest();<br>
+for (Hotel hotel ： hotels) {<br>
+HotelDoc hotelDoc = new HotelDoc(hotel);<br>
+request.add(new IndexRequest(&quot;gghotel&quot;)<br>
+.id(hotelDoc.getId().toString())<br>
+.source(mapper.writeValueAsString(hotelDoc), XContentType.JSON));<br>
+}<br>
+client.bulk(request, RequestOptions.DEFAULT);<br>
+}<br>
+第二步：运行 testBulkRequest，将 MySQL 中所有酒店数据批量导入 gghotel 索引。<br>
+第三步：通过 Kibana 验证：<br>
+● 访问 http：//你的ip地址：5601<br>
+● 输入：<br>
+GET /gghotel/_search<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match_all&quot;： {}<br>
+}<br>
+}</p>
+</li>
+</ol>
+<h1 id="es-dsl查询文档">ES-DSL查询文档</h1>
+<p>官方文档： Elasticsearch Query DSL<br>
+一、查询类型概览</p>
+<ol>
+<li>
+<p>查询所有（match_all）<br>
+● 查询所有文档，一般用于测试或初步查看数据结构。<br>
+● 示例：<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match_all&quot;： {}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>全文检索查询（Full Text Queries）<br>
+2.1 match 查询<br>
+● 对输入进行分词，再匹配倒排索引。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;xxALL&quot;： &quot;如家&quot;<br>
+}<br>
+}<br>
+}<br>
+2.2 multi_match 查询<br>
+● 可同时匹配多个字段。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;multi_match&quot;： {<br>
+&quot;query&quot;： &quot;如家&quot;,<br>
+&quot;fields&quot;： [&quot;name&quot;, &quot;brand&quot;, &quot;business&quot;]<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>精确查询（Term-level Queries）<br>
+3.1 term 查询<br>
+● 不分词，直接匹配 keyword、数值、布尔值、日期字段等。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;term&quot;： {<br>
+&quot;city&quot;： &quot;上海&quot;<br>
+}<br>
+}<br>
+}<br>
+3.2 range 查询<br>
+● 范围匹配<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;range&quot;： {<br>
+&quot;price&quot;： {<br>
+&quot;gte&quot;： 200,<br>
+&quot;lte&quot;： 300<br>
+}<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>地理位置查询（Geo Queries）<br>
+geo_distance 查询<br>
+● 基于经纬度查找一定范围内的数据。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;geo_distance&quot;： {<br>
+&quot;distance&quot;： &quot;15km&quot;,<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 31.25,<br>
+&quot;lon&quot;： 121.5<br>
+}<br>
+}<br>
+}<br>
+}<br>
+geo_bounding_box 查询<br>
+● 查询geo_point值落在某个矩形范围的所有文档，用两个点来围成的矩形范围<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;geo_bounding_box&quot;： {<br>
+&quot;字段名&quot;: {<br>
+&quot;top_left&quot;: {<br>
+&quot;lat&quot;: 31.1,<br>
+&quot;lon&quot;: 121.5<br>
+},<br>
+&quot;bottom_right&quot;: {<br>
+&quot;lat&quot;: 30.9,<br>
+&quot;lon&quot;: 121.7<br>
+}<br>
+}<br>
+}<br>
+}<br>
+}</p>
+</li>
+<li>
+<p>复合查询（Compound Queries）<br>
+5.1 function_score 查询<br>
+● 控制文档得分以影响排名。<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;function_score&quot;： {<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;name&quot;： &quot;如家&quot;<br>
+}<br>
+},<br>
+&quot;functions&quot;： [<br>
+{<br>
+&quot;filter&quot;： { &quot;term&quot;： { &quot;city&quot;： &quot;北京&quot; } },<br>
+&quot;weight&quot;： 5<br>
+}<br>
+]<br>
+}<br>
+}<br>
+}<br>
+5.2 bool 查询<br>
+● 布尔组合查询（must/should/must_not/filter）<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;bool&quot;： {<br>
+&quot;must&quot;： [<br>
+{ &quot;match&quot;： { &quot;name&quot;： &quot;如家&quot; } }<br>
+],<br>
+&quot;filter&quot;： [<br>
+{ &quot;range&quot;： { &quot;price&quot;： { &quot;lte&quot;： 400 } } },<br>
+{<br>
+&quot;geo_distance&quot;： {<br>
+&quot;distance&quot;： &quot;10km&quot;,<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 31.21,<br>
+&quot;lon&quot;： 121.5<br>
+}<br>
+}<br>
+}<br>
+]<br>
+}<br>
+}<br>
+}</p>
+</li>
+</ol>
+<p>二、搜索结果处理</p>
+<ol>
+<li>排序（sort）<br>
+● 支持按 keyword、数值、地理位置、日期排序。<br>
+{<br>
+&quot;sort&quot;： [<br>
+{ &quot;_score&quot;： &quot;desc&quot; },<br>
+{ &quot;price&quot;： &quot;asc&quot; }<br>
+]<br>
+}<br>
+地理排序示例：<br>
+{<br>
+&quot;sort&quot;： [<br>
+{<br>
+&quot;_geo_distance&quot;： {<br>
+&quot;xxlocation&quot;： {<br>
+&quot;lat&quot;： 28.28811,<br>
+&quot;lon&quot;： 121.66053<br>
+},<br>
+&quot;order&quot;： &quot;asc&quot;,<br>
+&quot;unit&quot;： &quot;km&quot;<br>
+}<br>
+}<br>
+]<br>
+}</li>
+<li>分页（from + size）<br>
+{<br>
+&quot;from&quot;： 100,<br>
+&quot;size&quot;： 20,<br>
+&quot;query&quot;： { ... },<br>
+&quot;sort&quot;： [ { &quot;price&quot;： &quot;asc&quot; } ]<br>
+}<br>
+深度分页解决方案<br>
+● search_after：基于上次排序值翻页（只能向后翻）<br>
+● scroll：快照分页（内存消耗大，不实时，已不推荐）</li>
+<li>高亮显示（highlight）<br>
+{<br>
+&quot;query&quot;： {<br>
+&quot;match&quot;： {<br>
+&quot;name&quot;： &quot;如家&quot;<br>
+}<br>
+},<br>
+&quot;highlight&quot;： {<br>
+&quot;fields&quot;： {<br>
+&quot;name&quot;： {}<br>
+}<br>
+}<br>
+}</li>
+</ol>
+<p>三、总结<br>
+● 查询类型：match、multi_match、term、range、geo_distance、function_score、bool<br>
+● 结果处理：排序、分页、高亮<br>
+● 深度分页推荐使用 search_after<br>
+● 可通过 _score 或 weight 控制相关性排名</p>
+<h1 id="es-restclient查询文档">ES-RestClient查询文档</h1>
+<ol>
+<li>
+<p>match_all 查询（基础查询）<br>
+● 创建连接客户端：<br>
+RestClient restClient = RestClient.builder(new HttpHost(&quot;localhost&quot;, 9200)).build();<br>
+ElasticsearchClient client = new ElasticsearchClient(new RestClientTransport(restClient, new JacksonJsonpMapper()));<br>
+● 执行 match_all 查询：<br>
+SearchResponse<HotelDoc> response = client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.matchAll(m -&gt; m)),<br>
+HotelDoc.class<br>
+);<br>
+● 解析结果：<br>
+List<HotelDoc> hotels = response.hits().hits().stream()<br>
+.map(Hit：：source)<br>
+.collect(Collectors.toList());</p>
+</li>
+<li>
+<p>match 查询 / multi_match 查询<br>
+● match（单字段）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.match(m -&gt; m.field(&quot;name&quot;).query(&quot;如家&quot;))),<br>
+HotelDoc.class<br>
+);<br>
+● multi_match（多字段）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.multiMatch(m -&gt; m<br>
+.query(&quot;如家&quot;)<br>
+.fields(&quot;name&quot;, &quot;brand&quot;, &quot;business&quot;))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>提取解析逻辑（通用解析）<br>
+● 封装解析函数：<br>
+private List<HotelDoc> parse(SearchResponse<HotelDoc> response) {<br>
+return response.hits().hits().stream()<br>
+.map(Hit：：source)<br>
+.collect(Collectors.toList());<br>
+}<br>
+● 调用方式：<br>
+var result = parse(response);</p>
+</li>
+<li>
+<p>精确查询：term / range<br>
+● term 查询（不分词）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.term(t -&gt; t.field(&quot;city&quot;).value(v -&gt; v.stringValue(&quot;北京&quot;)))),<br>
+HotelDoc.class<br>
+);<br>
+● range 查询（大于/小于）：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.range(r -&gt; r<br>
+.field(&quot;price&quot;)<br>
+.gte(JsonData.of(200))<br>
+.lte(JsonData.of(500)))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>布尔查询（bool）<br>
+● 组合 must + filter：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.bool(b -&gt; b<br>
+.must(m -&gt; m.term(t -&gt; t.field(&quot;city&quot;).value(v -&gt; v.stringValue(&quot;上海&quot;))))<br>
+.filter(f -&gt; f.range(r -&gt; r.field(&quot;price&quot;).lte(JsonData.of(300))))<br>
+)),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>地理位置查询（geo_distance）<br>
+● 查询附近的酒店：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.geoDistance(g -&gt; g<br>
+.field(&quot;location&quot;)<br>
+.distance(&quot;5km&quot;)<br>
+.location(loc -&gt; loc.latlon(ll -&gt; ll.lat(31.21).lon(121.5)))<br>
+)),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>排序与分页<br>
+● 分页：<br>
+.from(0)<br>
+.size(10)<br>
+● 排序：<br>
+.sort(sort -&gt; sort.field(f -&gt; f<br>
+.field(&quot;price&quot;)<br>
+.order(SortOrder.Asc)))<br>
+● 完整组合查询：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.matchAll(m -&gt; m))<br>
+.from(0)<br>
+.size(10)<br>
+.sort(st -&gt; st.field(f -&gt; f.field(&quot;price&quot;).order(SortOrder.Asc))),<br>
+HotelDoc.class<br>
+);</p>
+</li>
+<li>
+<p>高亮显示<br>
+● 设置高亮字段：<br>
+client.search(s -&gt; s<br>
+.index(&quot;gghotel&quot;)<br>
+.query(q -&gt; q.match(m -&gt; m.field(&quot;name&quot;).query(&quot;如家&quot;)))<br>
+.highlight(h -&gt; h<br>
+.fields(&quot;name&quot;, f -&gt; f<br>
+.preTags(&quot;<em>&quot;)<br>
+.postTags(&quot;</em>&quot;)<br>
+)<br>
+),<br>
+HotelDoc.class<br>
+);<br>
+● 解析高亮内容：<br>
+for (Hit<HotelDoc> hit ： response.hits().hits()) {<br>
+HotelDoc doc = hit.source();<br>
+Map&lt;String, List<String>&gt; highlight = hit.highlight();<br>
+if (highlight != null &amp;&amp; highlight.containsKey(&quot;name&quot;)) {<br>
+doc.setName(highlight.get(&quot;name&quot;).get(0));<br>
+}<br>
+}<br>
+● 所有查询的构建入口都是 .query(q -&gt; q.xxx(...))，所有构造器都是 Lambda 风格链式调用。<br>
+● 所有字段建议使用 .field(&quot;xxx&quot;) 而不是静态常量，避免错误。<br>
+● JsonData.of(...) 用于传入通用数据，比如整数、布尔、字符串等。<br>
+● client.search(...) 的第二个参数必须是泛型，表示返回对象类型。</p>
+</li>
+</ol>
+<h1 id="es-es集群">ES-es集群</h1>
+<ol>
+<li>
+<p>集群核心概念补充<br>
+● 集群（Cluster）：由多个节点（Node）组成，对外表现为一个统一的搜索与索引服务。<br>
+● 节点（Node）：运行 Elasticsearch 的实例，每个节点有唯一名称。<br>
+● 索引（Index）：类似关系型数据库中的表，是逻辑上的文档集合。<br>
+● 文档（Document）：数据记录的最小单位，类似关系型数据库中的一行数据。<br>
+● 分片（Shard）：ES 为了实现横向扩展将一个索引的数据分成若干物理单元，每个分片可以独立存储、查询。</p>
+</li>
+<li>
+<p>节点角色详解<br>
+节点角色	配置项	说明<br>
+Master	node.master=true	负责集群管理（元数据、分片分配等），一个集群只能有一个主节点。<br>
+Data	node.data=true	存储数据，执行实际的 CRUD、搜索和聚合操作。<br>
+Ingest	node.ingest=true	负责预处理文档，如管道处理、日志解析等。<br>
+Coordinating	所有为 false	请求协调节点，不存储数据、不选主，负责接收请求并分发到数据节点。<br>
+建议：部署集群时，建议分离 Master 和 Data 节点，保证主节点稳定性。</p>
+</li>
+<li>
+<p>分片与副本机制深入理解<br>
+● 主分片（Primary Shard）：写入数据的起点，每条数据只会进入一个主分片。<br>
+● 副本分片（Replica Shard）：主分片的备份，不直接写入，但可读取。<br>
+● 分片分配公式：<br>
+shard = hash(_id) % number_of_primary_shards<br>
+● 副本作用：<br>
+○ 提升查询能力（副本也能查询）。<br>
+○ 宕机时提供容错（主分片宕机，副本可晋升为主分片）。</p>
+</li>
+<li>
+<p>分片分配过程细节<br>
+新增文档流程（简化）：</p>
+</li>
+<li>
+<p>请求到达协调节点。</p>
+</li>
+<li>
+<p>协调节点根据 _id 和主分片数选择目标主分片。</p>
+</li>
+<li>
+<p>将写请求转发到主分片所在节点。</p>
+</li>
+<li>
+<p>主分片写成功后同步给所有副本分片。<br>
+查询文档流程：</p>
+</li>
+<li>
+<p>请求到协调节点。</p>
+</li>
+<li>
+<p>协调节点将查询请求转发给所有分片（主或副本均可）。</p>
+</li>
+<li>
+<p>汇总返回结果并排序分页，返回给用户。</p>
+</li>
+<li>
+<p>故障转移与数据恢复机制<br>
+● Master 节点负责监控整个集群的健康状态。<br>
+● 当某个节点宕机后，主节点会重新分配分片副本，确保数据不丢失。<br>
+● 副本晋升机制：如果主分片不可用，副本自动晋升为新的主分片。<br>
+● 节点恢复后，主节点会尝试将原分片再迁回恢复节点（若配置允许）。<br>
+温馨提示：在生产环境下，推荐设置副本数至少为 1，确保高可用。</p>
+</li>
+<li>
+<p>避免脑裂和主节点选举机制<br>
+● 脑裂现象：网络异常或主节点宕机，多个候选节点各自认为自己是主节点，造成集群状态不一致。<br>
+● 选举机制（Zen Discovery）：<br>
+○ 需要超过半数候选节点的选票才能成为主节点。<br>
+○ 最好使用奇数个 master-eligible 节点（如 3 个），避免 50% 投票僵局。<br>
+● ES 7.0 以后：<br>
+○ 自动启用了基于 quorum（多数派）的主节点选举策略。<br>
+○ 不再手动设置 discovery.zen.minimum_master_nodes。</p>
+</li>
+<li>
+<p>Cerebro 工具优势总结<br>
+● 类似于 Kibana 的集群可视化管理工具。<br>
+● 可监控节点健康、分片状态、磁盘使用率等。<br>
+● 支持直接执行 DSL（但不支持复杂图表或 Kibana 的监控分析功能）。</p>
+</li>
+<li>
+<p>集群部署建议<br>
+● 生产集群一般配置建议：<br>
+○ 3 个 Master-eligible 节点（防止脑裂）。<br>
+○ 2-3 个 Data 节点（根据存储和查询压力增减）。<br>
+○ 分离 master 和 data 节点，避免角色冲突。<br>
+○ 使用外置的协调节点处理所有查询/写入请求，避免 master 过载。<br>
+● 磁盘容量规划：<br>
+○ 单节点使用磁盘最好不超过 70%，留有空间给 shard 迁移。</p>
+</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[设计模式]]></title>
+        <id>https://shengwei42.github.io/post/she-ji-mo-shi/</id>
+        <link href="https://shengwei42.github.io/post/she-ji-mo-shi/">
+        </link>
+        <updated>2025-04-28T07:24:37.000Z</updated>
+        <content type="html"><![CDATA[<p>设计模式是软件设计中常见问题的解决方案。GoF（Gang of Four）在他们的经典著作《设计模式：可复用面向对象软件的基础》中总结了23种设计模式，这些模式分为三大类：创建型模式、结构型模式和行为型模式。</p>
+<h3 id="创建型模式">创建型模式</h3>
+<ol>
+<li>
+<p><strong>工厂方法模式（Factory Method Pattern）</strong>：</p>
+<ul>
+<li>定义一个创建对象的接口，但由子类决定要实例化的类是哪一个。工厂方法使一个类的实例化延迟到其子类。</li>
+</ul>
+</li>
+<li>
+<p><strong>抽象工厂模式（Abstract Factory Pattern）</strong>：</p>
+<ul>
+<li>提供一个创建一系列相关或相互依赖对象的接口，而无需指定它们具体的类。</li>
+</ul>
+</li>
+<li>
+<p><strong>单例模式（Singleton Pattern）</strong>：</p>
+<ul>
+<li>确保一个类只有一个实例，并提供一个全局访问点来访问这个实例。</li>
+</ul>
+</li>
+<li>
+<p><strong>建造者模式（Builder Pattern）</strong>：</p>
+<ul>
+<li>将一个复杂对象的构建过程与其表示分离，使得同样的构建过程可以创建不同的表示。</li>
+</ul>
+</li>
+<li>
+<p><strong>原型模式（Prototype Pattern）</strong>：</p>
+<ul>
+<li>通过复制现有的实例来创建新的对象，而不是通过实例化类来创建对象。</li>
+</ul>
+</li>
+</ol>
+<h3 id="结构型模式">结构型模式</h3>
+<ol start="6">
+<li>
+<p><strong>适配器模式（Adapter Pattern）</strong>：</p>
+<ul>
+<li>将一个类的接口转换成客户希望的另一个接口，使得原本由于接口不兼容而不能一起工作的类可以协同工作。</li>
+</ul>
+</li>
+<li>
+<p><strong>桥接模式（Bridge Pattern）</strong>：</p>
+<ul>
+<li>将抽象部分与实现部分分离，使它们可以独立变化。</li>
+</ul>
+</li>
+<li>
+<p><strong>组合模式（Composite Pattern）</strong>：</p>
+<ul>
+<li>将对象组合成树形结构以表示“部分-整体”的层次结构。组合模式使得用户对单个对象和组合对象的使用具有一致性。</li>
+</ul>
+</li>
+<li>
+<p><strong>装饰器模式（Decorator Pattern）</strong>：</p>
+<ul>
+<li>动态地给对象添加一些额外的职责。装饰器模式提供了比继承更灵活的方式来扩展对象的功能。</li>
+</ul>
+</li>
+<li>
+<p><strong>外观模式（Facade Pattern）</strong>：</p>
+<ul>
+<li>为子系统中的一组接口提供一个一致的界面，外观模式定义了一个高层接口，这个接口使得这一子系统更加容易使用。</li>
+</ul>
+</li>
+<li>
+<p><strong>享元模式（Flyweight Pattern）</strong>：</p>
+<ul>
+<li>运用共享技术有效地支持大量细粒度的对象。</li>
+</ul>
+</li>
+<li>
+<p><strong>代理模式（Proxy Pattern）</strong>：</p>
+<ul>
+<li>为其他对象提供一种代理以控制对这个对象的访问。</li>
+</ul>
+</li>
+</ol>
+<h3 id="行为型模式">行为型模式</h3>
+<ol start="13">
+<li>
+<p><strong>责任链模式（Chain of Responsibility Pattern）</strong>：</p>
+<ul>
+<li>使多个对象都有机会处理请求，从而避免请求的发送者和接收者之间的耦合。将这些对象连成一条链，并沿着这条链传递请求，直到有一个对象处理它为止。</li>
+</ul>
+</li>
+<li>
+<p><strong>命令模式（Command Pattern）</strong>：</p>
+<ul>
+<li>将一个请求封装为一个对象，从而使你可以用不同的请求对客户进行参数化；对请求排队或记录请求日志，以及支持可撤销的操作。</li>
+</ul>
+</li>
+<li>
+<p><strong>解释器模式（Interpreter Pattern）</strong>：</p>
+<ul>
+<li>给定一个语言，定义它的文法的一种表示，并定义一个解释器，该解释器使用该表示来解释语言中的句子。</li>
+</ul>
+</li>
+<li>
+<p><strong>迭代器模式（Iterator Pattern）</strong>：</p>
+<ul>
+<li>提供一种方法顺序访问一个聚合对象中的各个元素，而又不暴露该对象的内部表示。</li>
+</ul>
+</li>
+<li>
+<p><strong>中介者模式（Mediator Pattern）</strong>：</p>
+<ul>
+<li>用一个中介对象来封装一系列的对象交互。中介者使各对象不需要显式地相互引用，从而使其耦合松散，而且可以独立地改变它们之间的交互。</li>
+</ul>
+</li>
+<li>
+<p><strong>备忘录模式（Memento Pattern）</strong>：</p>
+<ul>
+<li>在不破坏封装性的前提下，捕获一个对象的内部状态，并在该对象之外保存这个状态，以便以后恢复对象到原先保存的状态。</li>
+</ul>
+</li>
+<li>
+<p><strong>观察者模式（Observer Pattern）</strong>：</p>
+<ul>
+<li>定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都得到通知并被自动更新。</li>
+</ul>
+</li>
+<li>
+<p><strong>状态模式（State Pattern）</strong>：</p>
+<ul>
+<li>允许对象在内部状态改变时改变它的行为。对象看起来似乎修改了它的类。</li>
+</ul>
+</li>
+<li>
+<p><strong>策略模式（Strategy Pattern）</strong>：</p>
+<ul>
+<li>定义一系列的算法，把它们一个个封装起来，并且使它们可相互替换。本模式使得算法可独立于使用它的客户而变化。</li>
+</ul>
+</li>
+<li>
+<p><strong>模板方法模式（Template Method Pattern）</strong>：</p>
+<ul>
+<li>定义一个操作中的算法的骨架，而将一些步骤延迟到子类中。模板方法使得子类可以不改变一个算法的结构即可重定义该算法的某些特定步骤。</li>
+</ul>
+</li>
+<li>
+<p><strong>访问者模式（Visitor Pattern）</strong>：</p>
+<ul>
+<li>表示一个作用于某对象结构中的各元素的操作。它使你可以在不改变各元素的类的前提下定义作用于这些元素的新操作。</li>
+</ul>
+</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[RabbitMQ]]></title>
+        <id>https://shengwei42.github.io/post/rabbitmq/</id>
+        <link href="https://shengwei42.github.io/post/rabbitmq/">
+        </link>
+        <updated>2025-04-15T08:28:36.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="消息队列">消息队列</h1>
+<h2 id="mq-的相关概念">MQ 的相关概念</h2>
+<h3 id="什么是mq">什么是MQ</h3>
+<p>MQ(message queue)，从字面意思上看，本质是个队列，FIFO 先入先出，只不过队列中存放的内容是 message 而已，还是一种跨进程的通信机制，用于上下游传递消息。在互联网架构中，MQ 是一种非常常 见的上下游“逻辑解耦+物理解耦”的消息通信服务。使用了 MQ 之后，消息发送上游只需要依赖 MQ，不 用依赖其他服务。</p>
+<h3 id="为什么要用mq">为什么要用MQ</h3>
+<ul>
+<li><strong>流量消峰</strong></li>
+</ul>
+<p>举个例子，如果订单系统最多能处理一万次订单，这个处理能力应付正常时段的下单时绰绰有余，正常时段我们下单一秒后就能返回结果。但是在高峰期，如果有两万次下单操作系统是处理不了的，只能限制订单超过一万后不允许用户下单。使用消息队列做缓冲，我们可以取消这个限制，把一秒内下的订单分散成一段时间来处理，这时有些用户可能在下单十几秒后才能收到下单成功的操作，但是比不能下单的体验要好。</p>
+<ul>
+<li><strong>应用解耦</strong></li>
+</ul>
+<p>以电商应用为例，应用中有订单系统、库存系统、物流系统、支付系统。用户创建订单后，如果耦合 调用库存系统、物流系统、支付系统，任何一个子系统出了故障，都会造成下单操作异常。当转变成基于 消息队列的方式后，系统间调用的问题会减少很多，比如物流系统因为发生故障，需要几分钟来修复。在 这几分钟的时间里，物流系统要处理的内存被缓存在消息队列中，用户的下单操作可以正常完成。当物流 系统恢复后，继续处理订单信息即可，中单用户感受不到物流系统的故障，提升系统的可用性。</p>
+<ul>
+<li><strong>异步处理</strong></li>
+</ul>
+<p>有些服务间调用是异步的，例如 A 调用 B，B 需要花费很长时间执行，但是 A 需要知道 B 什么时候可以执行完。</p>
+<p>以前一般有两种方式，A 过一段时间去调用 B 的查询 api 查询。或者 A 提供一个 callback api， B 执行完之后调用 api 通知 A 服务。这两种方式都不是很优雅。</p>
+<p>使用消息总线，可以很方便解决这个问题， A 调用 B 服务后，只需要监听 B 处理完成的消息，当 B 处理完成后，会发送一条消息给 MQ，MQ 会将此消息转发给 A 服务。这样 A 服务既不用循环调用 B 的查询 api，也不用提供 callback api。同样B 服务也不用 做这些操作。A 服务还能及时的得到异步处理成功的消息。</p>
+<h3 id="mq-的分类">MQ 的分类</h3>
+<p>::: tip ActiveMQ</p>
+<p>:::</p>
+<p>优点：单机吞吐量万级，时效性 ms 级，可用性高，基于主从架构实现高可用性，消息可靠性较 低的概率丢失数据</p>
+<p>缺点：官方社区现在对 ActiveMQ 5.x 维护越来越少，高吞吐量场景较少使用。</p>
+<p>::: tip Kafka</p>
+<p>:::</p>
+<p>大数据的杀手锏，谈到大数据领域内的消息传输，则绕不开 Kafka，这款为<strong>大数据而生</strong>的消息中间件， 以其百万级 TPS 的吞吐量名声大噪，迅速成为大数据领域的宠儿，在数据采集、传输、存储的过程中发挥 着举足轻重的作用。目前已经被 LinkedIn，Uber, Twitter, Netflix 等大公司所采纳。</p>
+<p><strong>优点</strong>：性能卓越，单机写入 TPS 约在百万条/秒，最大的优点，就是<strong>吞吐量高</strong>。时效性 ms 级可用性非 常高，kafka 是分布式的，一个数据多个副本，少数机器宕机，不会丢失数据，不会导致不可用,消费者采 用 Pull 方式获取消息, 消息有序, 通过控制能够保证所有消息被消费且仅被消费一次;有优秀的第三方Kafka Web 管理界面 Kafka-Manager；在日志领域比较成熟，被多家公司和多个开源项目使用；功能支持： 功能 较为简单，主要支持简单的 MQ 功能，在大数据领域的实时计算以及日志采集被大规模使用</p>
+<p><strong>缺点</strong>：Kafka 单机超过 64 个队列/分区，Load 会发生明显的飙高现象，队列越多，load 越高，发送消 息响应时间变长，使用短轮询方式，实时性取决于轮询间隔时间，消费失败不支持重试；支持消息顺序， 但是一台代理宕机后，就会产生消息乱序，<strong>社区更新较慢</strong>；</p>
+<p>::: tip RocketMQ</p>
+<p>:::</p>
+<p>RocketMQ 出自阿里巴巴的开源产品，用 Java 语言实现，在设计时参考了 Kafka，并做出了自己的一 些改进。被阿里巴巴广泛应用在订单，交易，充值，流计算，消息推送，日志流式处理，binglog 分发等场 景。</p>
+<p>优点：<strong>单机吞吐量十万级</strong>,可用性非常高，分布式架构，<strong>消息可以做到 0 丢失</strong>,MQ 功能较为完善，还是分 布式的，扩展性好,支<strong>持 10 亿级别的消息堆积</strong>，不会因为堆积导致性能下降,源码是 java 我们可以自己阅 读源码，定制自己公司的 MQ</p>
+<p>缺点：<strong>支持的客户端语言不多</strong>，目前是 java 及 c++，其中 c++不成熟；社区活跃度一般,没有在MQ 核心中去实现 JMS 等接口,有些系统要迁移需要修改大量代码</p>
+<p>::: note RabbitMQ</p>
+<p>:::</p>
+<p>2007 年发布，是一个在AMQP(高级消息队列协议)基础上完成的，可复用的企业消息系统，<strong>是当前最主流的消息中间件之一。</strong></p>
+<p>优点：由于 erlang 语言的高并发特性，性能较好；吞吐量到万级，MQ 功能比较完备,健壮、稳定、易 用、跨平台、支持多种语言 如：Python、Ruby、.NET、Java、JMS、C、PHP、ActionScript、XMPP、STOMP 等，支持 AJAX 文档齐全；开源提供的管理界面非常棒，用起来很好用,社区活跃度高；更新频率相当高</p>
+<p>官网更新：<a href="https://www.rabbitmq.com/news.html">https://www.rabbitmq.com/news.html</a></p>
+<p>缺点：商业版需要收费,学习成本较高</p>
+<h3 id="mq-的选择">MQ 的选择</h3>
+<ul>
+<li><strong>Kafka</strong></li>
+</ul>
+<p>Kafka 主要特点是基于Pull 的模式来处理消息消费，追求高吞吐量，一开始的目的就是用于日志收集 和传输，适合产生大量数据的互联网服务的数据收集业务。大型公司建议可以选用，如果有日志采集功能， 肯定是首选 kafka 了。</p>
+<p>尚硅谷官网 kafka 视频教程：http://www.gulixueyuan.com/course/330/tasks</p>
+<ul>
+<li><strong>RocketMQ</strong></li>
+</ul>
+<p>天生为<strong>金融互联网</strong>领域而生，对于可靠性要求很高的场景，尤其是电商里面的订单扣款，以及业务削 峰，在大量交易涌入时，后端可能无法及时处理的情况。RoketMQ 在稳定性上可能更值得信赖，这些业务 场景在阿里双 11 已经经历了多次考验，如果你的业务有上述并发场景，建议可以选择 RocketMQ。</p>
+<ul>
+<li>RabbitMQ</li>
+</ul>
+<p>结合 erlang 语言本身的并发优势，性能好时效性微秒级，社区活跃度也比较高，管理界面用起来十分 方便，如果你的<strong>数据量没有那么大</strong>，中小型公司优先选择功能比较完备的 RabbitMQ。</p>
+<h2 id="rabbitmq">RabbitMQ</h2>
+<h3 id="rabbitmq-的概念">RabbitMQ 的概念</h3>
+<p>RabbitMQ 是一个消息中间件：它接受并转发消息。</p>
+<p>你可以把它当做一个快递站点，当你要发送一个包裹时，你把你的包裹放到快递站，快递员最终会把你的快递送到收件人那里，按照这种逻辑 RabbitMQ 是 一个快递站，一个快递员帮你传递快件。</p>
+<p>RabbitMQ 与快递站的主要区别在于，它不处理快件而是接收， 存储和转发消息数据。</p>
+<h3 id="四大核心概念">四大核心概念</h3>
+<ul>
+<li>
+<p>生产者</p>
+<p>产生数据发送消息的程序是生产者</p>
+</li>
+<li>
+<p>交换机</p>
+<p>交换机是 RabbitMQ 非常重要的一个部件，一方面它接收来自生产者的消息，另一方面它将消息 推送到队列中。交换机必须确切知道如何处理它接收到的消息，是将这些消息推送到特定队列还是推 送到多个队列，亦或者是把消息丢弃，这个得有交换机类型决定</p>
+</li>
+<li>
+<p>队列</p>
+<p>队列是 RabbitMQ 内部使用的一种数据结构，尽管消息流经 RabbitMQ 和应用程序，但它们只能存 储在队列中。队列仅受主机的内存和磁盘限制的约束，本质上是一个大的消息缓冲区。许多生产者可 以将消息发送到一个队列，许多消费者可以尝试从一个队列接收数据。这就是我们使用队列的方式</p>
+</li>
+<li>
+<p>消费者</p>
+<p>消费与接收具有相似的含义。消费者大多时候是一个等待接收消息的程序。请注意生产者，消费 者和消息中间件很多时候并不在同一机器上。同一个应用程序既可以是生产者又是可以是消费者。</p>
+</li>
+</ul>
+<h3 id="各个名词介绍">各个名词介绍</h3>
+<ul>
+<li>
+<p>Broker</p>
+<p>接收和分发消息的应用，RabbitMQ Server 就是 Message Broker</p>
+</li>
+<li>
+<p>Virtual host</p>
+<p>出于多租户和安全因素设计的，把 AMQP 的基本组件划分到一个虚拟的分组中，类似 于网络中的 namespace 概念。当多个不同的用户使用同一个 RabbitMQ server 提供的服务时，可以划分出 多个 vhost，每个用户在自己的 vhost 创建 exchange／queue 等</p>
+</li>
+<li>
+<p>Connection</p>
+<p>publisher／consumer 和 broker 之间的 TCP 连接</p>
+</li>
+<li>
+<p>Channel</p>
+<p>如果每一次访问 RabbitMQ 都建立一个 Connection，在消息量大的时候建立 TCP Connection 的开销将是巨大的，效率也较低。Channel 是在 connection 内部建立的逻辑连接，如果应用程 序支持多线程，通常每个 thread 创建单独的 channel 进行通讯，AMQP method 包含了 channel id 帮助客 户端和 message broker 识别 channel，所以 channel 之间是完全隔离的。Channel 作为轻量级的 Connection 极大减少了操作系统建立 TCP connection 的开销</p>
+</li>
+<li>
+<p>Exchange</p>
+<p>message 到达 broker 的第一站，根据分发规则，匹配查询表中的 routing key，分发 消息到 queue 中去。常用的类型有：direct (point-to-point), topic (publish-subscribe) and fanout (multicast)</p>
+</li>
+<li>
+<p>Queue</p>
+<p>消息最终被送到这里等待 consumer 取走</p>
+</li>
+<li>
+<p>Binding</p>
+<p>exchange 和 queue 之间的虚拟连接，binding 中可以包含 routing key，Binding 信息被保 存到 exchange 中的查询表中，用于 message 的分发依据</p>
+</li>
+</ul>
+<h3 id="amqp-协议">AMQP 协议</h3>
+<p>RabbitMQ 就是 AMQP 协议的 Erlang 的实现(当然 RabbitMQ 还支持 STOMP2、 MQTT3 等协议 ) AMQP 的模型架构 和 RabbitMQ 的模型架构是一样的，生产者将消息发送给交换器，交换器和队列绑定 。RabbitMQ 中的交换器、交换器类型、队列、绑定、路由键等都是遵循的 AMQP 协议中相 应的概念。目前 RabbitMQ 最新版本默认支持的是 AMQP 0-9-1。</p>
+<p>AMQP 协议的三层：</p>
+<ul>
+<li>Module Layer:协议最高层，主要定义了一些客户端调用的命令，客户端可以用这些命令实现自己的业务逻辑。</li>
+<li>Session Layer:中间层，主要负责客户端命令发送给服务器，再将服务端应答返回客户端，提供可靠性同步机制和错误处理。</li>
+<li>TransportLayer:最底层，主要传输二进制数据流，提供帧的处理、信道复用、错误检测和数据表示等。</li>
+</ul>
+<p>AMQP 模型的三大组件：</p>
+<ul>
+<li>交换器 (Exchange)：消息代理服务器中用于把消息路由到队列的组件。</li>
+<li>队列 (Queue)：用来存储消息的数据结构，位于硬盘或内存中。</li>
+<li>绑定 (Binding)：一套规则，告知交换器消息应该将消息投递给哪个队列。</li>
+</ul>
+<h3 id="死信队列">死信队列</h3>
+<p>DLX，全称为 Dead-Letter-Exchange，死信交换器，死信邮箱。当消息在一个队列中变成死信 (dead message) 之后，它能被重新发送到另一个交换器中，这个交换器就是 DLX，绑定 DLX 的队列就称之为死信队列。导致的死信的几种原因：</p>
+<ul>
+<li>消息被拒（Basic.Reject /Basic.Nack) 且 requeue = false。</li>
+<li>消息 TTL 过期。</li>
+<li>队列满了，无法再添加。</li>
+</ul>
+<h3 id="延迟队列">延迟队列</h3>
+<p>延迟队列指的是存储对应的延迟消息，消息被发送以后，并不想让消费者立刻拿到消息，而是等待特定时间后，消费者才能拿到这个消息进行消费。RabbitMQ 本身是没有延迟队列的，要实现延迟消息，一般有两种方式：</p>
+<ul>
+<li>通过 RabbitMQ 本身队列的特性来实现，需要使用 RabbitMQ 的死信交换机（Exchange）和消息的存活时间 TTL（Time To Live）。</li>
+<li>在 RabbitMQ 3.5.7 及以上的版本提供了一个插件（rabbitmq-delayed-message-exchange）来实现延迟队列功能。同时，插件依赖 Erlang/OPT 18.0 及以上。<br>
+也就是说，AMQP 协议以及 RabbitMQ 本身没有直接支持延迟队列的功能，但是可以通过 TTL 和 DLX 模拟出延迟队列的功能。</li>
+</ul>
+<h3 id="rabbitmq-工作模式">RabbitMQ 工作模式</h3>
+<ul>
+<li>简单模式</li>
+<li>work 工作模式</li>
+<li>pub/sub 发布订阅模式</li>
+<li>Routing 路由模式</li>
+<li>Topic 主题模式</li>
+</ul>
+<h3 id="rabbitmq-消息传输">RabbitMQ 消息传输</h3>
+<p>由于 TCP 链接的创建和销毁开销较大，且并发数受系统资源限制，会造成性能瓶颈，所以 RabbitMQ 使用信道的方式来传输数据。信道（Channel）是生产者、消费者与 RabbitMQ 通信的渠道，信道是建立在 TCP 链接上的虚拟链接，且每条 TCP 链接上的信道数量没有限制。就是说 RabbitMQ 在一条 TCP 链接上建立成百上千个信道来达到多个线程处理，这个 TCP 被多个线程共享，每个信道在 RabbitMQ 都有唯一的 ID，保证了信道私有性，每个信道对应一个线程使用。</p>
+<h3 id="如何保证消息的可靠性">如何保证消息的可靠性？</h3>
+<p>消息到 MQ 的过程中搞丢，MQ 自己搞丢，MQ 到消费过程中搞丢。</p>
+<ul>
+<li>生产者到 RabbitMQ：事务机制和 Confirm 机制，注意：事务机制和 Confirm 机制是互斥的，两者不能共存，会导致 RabbitMQ 报错。</li>
+<li>RabbitMQ 自身：持久化、集群、普通模式、镜像模式。</li>
+<li>RabbitMQ 到消费者：basicAck 机制、死信队列、消息补偿机制。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[十大排序算法]]></title>
+        <id>https://shengwei42.github.io/post/shi-da-pai-xu-suan-fa/</id>
+        <link href="https://shengwei42.github.io/post/shi-da-pai-xu-suan-fa/">
+        </link>
+        <updated>2025-03-25T07:32:02.000Z</updated>
+        <content type="html"><![CDATA[<ol>
+<li>冒泡排序 (Bubble Sort)<br>
+原理：通过相邻元素之间的比较和交换，逐步将较大（或较小）的元素“冒泡”到数组的一端。<br>
+时间复杂度：O(n²)</li>
+</ol>
+<pre><code>// 冒泡排序方法
+    public static void bubbleSort(int[] arr) {
+        int n = arr.length;
+        // 外层循环控制排序的轮数
+        for (int i = 0; i &lt; n - 1; i++) {
+            // 内层循环进行相邻元素的比较和交换
+            for (int j = 0; j &lt; n - 1 - i; j++) {
+                // 如果当前元素大于下一个元素，则交换
+                if (arr[j] &gt; arr[j + 1]) {
+                    // 交换元素
+                    int temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                }
+            }
+        }
+    }
+
+    public static void betterBubbleSort(int[] arr) {
+        int n = arr.length;
+        // 外层循环控制排序的轮数
+        for (int i = 0; i &lt; n - 1; i++) {
+            // 标志位，记录本轮是否发生过交换
+            boolean swapped = false;
+
+            // 内层循环进行相邻元素的比较和交换
+            for (int j = 0; j &lt; n - 1 - i; j++) {
+                // 如果当前元素大于下一个元素，则交换
+                if (arr[j] &gt; arr[j + 1]) {
+                    // 交换元素
+                    int temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                    swapped = true; // 标记发生了交换
+                }
+            }
+
+            // 如果本轮没有发生交换，说明数组已经有序，直接退出
+            if (!swapped) {
+                break;
+            }
+        }
+    }
+</code></pre>
+<ol start="2">
+<li>选择排序 (Selection Sort)<br>
+原理：每次从未排序部分中选出最小（或最大）的元素，放到已排序部分的末尾。<br>
+时间复杂度：O(n²)</li>
+</ol>
+<pre><code>// 选择排序方法
+    public static void selectionSort(int[] arr) {
+        int n = arr.length;
+        // 外层循环控制已排序部分的边界
+        for (int i = 0; i &lt; n - 1; i++) {
+            // 假设当前未排序部分的第一个元素是最小的
+            int minIndex = i;
+
+            // 内层循环从未排序部分中寻找最小元素的索引
+            for (int j = i + 1; j &lt; n; j++) {
+                if (arr[j] &lt; arr[minIndex]) {
+                    minIndex = j; // 更新最小元素索引
+                }
+            }
+
+            // 将找到的最小元素与未排序部分的第一个元素交换
+            if (minIndex != i) {
+                int temp = arr[i];
+                arr[i] = arr[minIndex];
+                arr[minIndex] = temp;
+            }
+        }
+    }
+</code></pre>
+<ol start="3">
+<li>插入排序 (Insertion Sort)<br>
+原理：将数组分为已排序和未排序两部分，逐个将未排序的元素插入到已排序部分中的正确位置。<br>
+时间复杂度：O(n²)</li>
+</ol>
+<pre><code>// 插入排序方法
+    public static void insertionSort(int[] arr) {
+        int n = arr.length;
+        // 从第二个元素开始（索引 1），逐个插入到已排序部分
+        for (int i = 1; i &lt; n; i++) {
+            int key = arr[i]; // 当前待插入的元素
+            int j = i - 1;    // 已排序部分的最后一个元素索引
+
+            // 将大于 key 的元素向后移动，为 key 腾出位置
+            while (j &gt;= 0 &amp;&amp; arr[j] &gt; key) {
+                arr[j + 1] = arr[j]; // 元素后移
+                j--;
+            }
+            // 插入 key 到正确位置
+            arr[j + 1] = key;
+        }
+    }
+</code></pre>
+<ol start="4">
+<li>希尔排序 (Shell Sort)<br>
+原理：插入排序的改进版，通过设置间隔（步长）对元素分组排序，逐步缩小间隔直到完成排序。<br>
+时间复杂度：O(n log n) 至 O(n²)，取决于步长序列</li>
+</ol>
+<pre><code>// 希尔排序方法
+    public static void shellSort(int[] arr) {
+        int n = arr.length;
+
+        // 从初始增量（gap）开始，逐步缩小直到 1
+        for (int gap = n / 2; gap &gt; 0; gap /= 2) {
+            // 对每个增量分组进行插入排序
+            for (int i = gap; i &lt; n; i++) {
+                int key = arr[i]; // 当前待插入的元素
+                int j = i;
+
+                // 在当前组内进行插入排序，将 key 插入到正确位置
+                while (j &gt;= gap &amp;&amp; arr[j - gap] &gt; key) {
+                    arr[j] = arr[j - gap]; // 元素后移
+                    j -= gap;
+                }
+                arr[j] = key; // 插入 key
+            }
+        }
+    }
+</code></pre>
+<ol start="5">
+<li>归并排序 (Merge Sort)<br>
+原理：采用分治法，将数组递归分成小块，排序后再合并。<br>
+归并排序有两种实现方法，一种是自顶向下，一种是自底向上<br>
+时间复杂度：O(n log n)<br>
+自底向上版本：</li>
+</ol>
+<pre><code>// 自底向上归并排序入口
+    public static void mergeSort(int[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return;
+        }
+        int n = arr.length;
+
+        // 从子数组大小 1 开始，逐步加倍合并
+        for (int size = 1; size &lt; n; size *= 2) {
+            // 对每个子数组对进行合并
+            for (int left = 0; left &lt; n - size; left += size * 2) {
+                int mid = left + size - 1;
+                int right = Math.min(left + size * 2 - 1, n - 1); // 防止越界
+                merge(arr, left, mid, right);
+            }
+        }
+    }
+
+    // 合并两个有序子数组
+    private static void merge(int[] arr, int left, int mid, int right) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+        int[] leftArray = new int[n1];
+        int[] rightArray = new int[n2];
+
+        // 复制数据到临时数组
+        for (int i = 0; i &lt; n1; i++) leftArray[i] = arr[left + i];
+        for (int j = 0; j &lt; n2; j++) rightArray[j] = arr[mid + 1 + j];
+
+        // 合并
+        int i = 0, j = 0, k = left;
+        while (i &lt; n1 &amp;&amp; j &lt; n2) {
+            if (leftArray[i] &lt;= rightArray[j]) { // 保证稳定性
+                arr[k++] = leftArray[i++];
+            } else {
+                arr[k++] = rightArray[j++];
+            }
+        }
+        while (i &lt; n1) arr[k++] = leftArray[i++];
+        while (j &lt; n2) arr[k++] = rightArray[j++];
+    }
+</code></pre>
+<p>自顶向下版本：</p>
+<pre><code>// 自顶向下归并排序入口
+    public static void mergeSort(int[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return;
+        }
+        sort(arr, 0, arr.length - 1);
+    }
+
+    // 递归分治
+    private static void sort(int[] arr, int left, int right) {
+        if (left &lt; right) {
+            int mid = left + (right - left) / 2;
+            sort(arr, left, mid);        // 递归排序左半部分
+            sort(arr, mid + 1, right);   // 递归排序右半部分
+            merge(arr, left, mid, right); // 合并
+        }
+    }
+
+    // 合并两个有序子数组
+    private static void merge(int[] arr, int left, int mid, int right) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+        int[] leftArray = new int[n1];
+        int[] rightArray = new int[n2];
+
+        // 复制数据到临时数组
+        for (int i = 0; i &lt; n1; i++) leftArray[i] = arr[left + i];
+        for (int j = 0; j &lt; n2; j++) rightArray[j] = arr[mid + 1 + j];
+
+        // 合并
+        int i = 0, j = 0, k = left;
+        while (i &lt; n1 &amp;&amp; j &lt; n2) {
+            if (leftArray[i] &lt;= rightArray[j]) { // 保证稳定性
+                arr[k++] = leftArray[i++];
+            } else {
+                arr[k++] = rightArray[j++];
+            }
+        }
+        while (i &lt; n1) arr[k++] = leftArray[i++];
+        while (j &lt; n2) arr[k++] = rightArray[j++];
+    }
+</code></pre>
+<ol start="6">
+<li>快速排序 (Quick Sort)<br>
+原理：选择一个基准（pivot），将数组分为小于和大于基准的两部分，递归排序。<br>
+时间复杂度：平均 O(n log n)，最坏 O(n²)</li>
+</ol>
+<pre><code>// 快速排序入口方法
+    public static void quickSort(int[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return; // 数组为空或只有一个元素，无需排序
+        }
+        sort(arr, 0, arr.length - 1);
+    }
+
+    // 递归排序方法
+    private static void sort(int[] arr, int low, int high) {
+        if (low &lt; high) {
+            // 分区并获取基准位置
+            int pivotIndex = partition(arr, low, high);
+            // 递归排序左半部分
+            sort(arr, low, pivotIndex - 1);
+            // 递归排序右半部分
+            sort(arr, pivotIndex + 1, high);
+        }
+    }
+
+    // 分区方法（Lomuto 分区方案）
+    private static int partition(int[] arr, int low, int high) {
+        int pivot = arr[high]; // 选择最后一个元素作为基准
+        int i = low - 1;       // i 指向小于基准的区域边界
+
+        // 遍历从 low 到 high-1 的元素
+        for (int j = low; j &lt; high; j++) {
+            // 如果当前元素小于等于基准，扩展小于区域
+            if (arr[j] &lt;= pivot) {
+                i++;
+                // 交换元素
+                int temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+
+        // 将基准放到正确位置
+        int temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+
+        return i + 1; // 返回基准最终位置
+    }
+</code></pre>
+<ol start="7">
+<li>堆排序 (Heap Sort)<br>
+原理：利用堆数据结构（通常是最大堆或最小堆），反复调整堆并提取元素完成排序。<br>
+时间复杂度：O(n log n)</li>
+</ol>
+<pre><code>// 堆排序入口方法
+    public static void heapSort(int[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return; // 数组为空或只有一个元素，无需排序
+        }
+
+        int n = arr.length;
+
+        // 第一步：构建最大堆
+        for (int i = n / 2 - 1; i &gt;= 0; i--) {
+            heapify(arr, n, i);
+        }
+
+        // 第二步：逐步将堆顶（最大值）移到末尾，并调整剩余部分为最大堆
+        for (int i = n - 1; i &gt; 0; i--) {
+            // 将堆顶（最大值）与当前末尾交换
+            swap(arr, 0, i);
+            // 对剩余部分调整为最大堆
+            heapify(arr, i, 0);
+        }
+    }
+
+    // 调整堆的方法（最大堆）
+    private static void heapify(int[] arr, int n, int i) {
+        int largest = i;       // 假设当前节点为最大
+        int left = 2 * i + 1;  // 左子节点
+        int right = 2 * i + 2; // 右子节点
+
+        // 如果左子节点存在且大于当前最大值
+        if (left &lt; n &amp;&amp; arr[left] &gt; arr[largest]) {
+            largest = left;
+        }
+
+        // 如果右子节点存在且大于当前最大值
+        if (right &lt; n &amp;&amp; arr[right] &gt; arr[largest]) {
+            largest = right;
+        }
+
+        // 如果最大值不是当前节点，交换并递归调整
+        if (largest != i) {
+            swap(arr, i, largest);
+            heapify(arr, n, largest); // 递归调整受影响的子树
+        }
+    }
+
+    // 交换数组中两个元素
+    private static void swap(int[] arr, int i, int j) {
+        int temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+</code></pre>
+<ol start="8">
+<li>计数排序 (Counting Sort)<br>
+原理：非比较排序，统计每个元素出现的次数，然后根据计数重建有序数组。<br>
+时间复杂度：O(n + k)，k 是数据范围</li>
+</ol>
+<pre><code>// 计数排序方法
+    public static void countingSort(int[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return; // 数组为空或只有一个元素，无需排序
+        }
+
+        // 第一步：找到数组中的最大值，确定计数数组的大小
+        int max = arr[0];
+        for (int i = 1; i &lt; arr.length; i++) {
+            if (arr[i] &gt; max) {
+                max = arr[i];
+            }
+        }
+
+        // 第二步：创建计数数组并统计每个元素出现的次数
+        int[] count = new int[max + 1]; // 索引从 0 到 max
+        for (int i = 0; i &lt; arr.length; i++) {
+            count[arr[i]]++;
+        }
+
+        // 第三步：将计数数组转换为累加数组（表示小于等于某个值的元素个数）
+        for (int i = 1; i &lt;= max; i++) {
+            count[i] += count[i - 1];
+        }
+
+        // 第四步：从原始数组逆序遍历，构建排序后的结果
+        int[] output = new int[arr.length];
+        for (int i = arr.length - 1; i &gt;= 0; i--) {
+            output[count[arr[i]] - 1] = arr[i]; // 放入正确位置
+            count[arr[i]]--;                    // 更新计数
+        }
+
+        // 第五步：将结果复制回原数组
+        for (int i = 0; i &lt; arr.length; i++) {
+            arr[i] = output[i];
+        }
+    }
+</code></pre>
+<ol start="9">
+<li>桶排序 (Bucket Sort)<br>
+原理：将元素分配到若干个桶中，对每个桶分别排序，最后合并结果。<br>
+时间复杂度：平均 O(n + k)，k 是桶的数量</li>
+</ol>
+<pre><code>// 桶排序方法
+    public static void bucketSort(float[] arr) {
+        if (arr == null || arr.length &lt;= 1) {
+            return; // 数组为空或只有一个元素，无需排序
+        }
+
+        int n = arr.length;
+
+        // 第一步：创建桶（这里用 ArrayList 数组表示）
+        ArrayList&lt;Float&gt;[] buckets = new ArrayList[n];
+        for (int i = 0; i &lt; n; i++) {
+            buckets[i] = new ArrayList&lt;&gt;();
+        }
+
+        // 第二步：将元素分配到对应的桶中
+        for (int i = 0; i &lt; n; i++) {
+            int bucketIndex = (int) (n * arr[i]); // 假设 arr[i] 在 [0, 1) 范围内
+            buckets[bucketIndex].add(arr[i]);
+        }
+
+        // 第三步：对每个桶内的元素进行排序（使用 Collections.sort 或插入排序）
+        for (int i = 0; i &lt; n; i++) {
+            Collections.sort(buckets[i]); // 使用 Java 自带的稳定排序
+        }
+
+        // 第四步：将所有桶的元素依次放回原数组
+        int index = 0;
+        for (int i = 0; i &lt; n; i++) {
+            for (float num : buckets[i]) {
+                arr[index++] = num;
+            }
+        }
+    }
+</code></pre>
+<ol start="10">
+<li>基数排序 (Radix Sort)<br>
+原理：非比较排序，按位（个位、十位等）对数字进行多次分配和收集，最终排序。<br>
+时间复杂度：O(n * k)，k 是最大位数</li>
+</ol>
+<pre><code>// 基数排序入口方法
+   public static void radixSort(int[] arr) {
+       if (arr == null || arr.length &lt;= 1) {
+           return; // 数组为空或只有一个元素，无需排序
+       }
+
+       // 找到最大值以确定最大位数
+       int max = arr[0];
+       for (int i = 1; i &lt; arr.length; i++) {
+           if (arr[i] &gt; max) {
+               max = arr[i];
+           }
+       }
+
+       // 按位进行计数排序，从最低位到最高位
+       for (int exp = 1; max / exp &gt; 0; exp *= 10) {
+           countingSortByDigit(arr, exp);
+       }
+   }
+
+   // 按某一位进行计数排序
+   private static void countingSortByDigit(int[] arr, int exp) {
+       int n = arr.length;
+       int[] output = new int[n]; // 输出数组
+       int[] count = new int[10]; // 计数数组（0-9）
+
+       // 统计当前位上每个数字的出现次数
+       for (int i = 0; i &lt; n; i++) {
+           int digit = (arr[i] / exp) % 10;
+           count[digit]++;
+       }
+
+       // 转换为累加计数，表示每个数字的位置
+       for (int i = 1; i &lt; 10; i++) {
+           count[i] += count[i - 1];
+       }
+
+       // 从右到左构建排序结果，保证稳定性
+       for (int i = n - 1; i &gt;= 0; i--) {
+           int digit = (arr[i] / exp) % 10;
+           output[count[digit] - 1] = arr[i];
+           count[digit]--;
+       }
+
+       // 将结果复制回原数组
+       for (int i = 0; i &lt; n; i++) {
+           arr[i] = output[i];
+       }
+   }
+</code></pre>
+<h1 id="综合对比">综合对比</h1>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>时间复杂度</th>
+<th>空间复杂度</th>
+<th>稳定性</th>
+<th>原地排序</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>冒泡排序</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>稳定</td>
+<td>是</td>
+<td>小规模、部分有序</td>
+</tr>
+<tr>
+<td>选择排序</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>不稳定</td>
+<td>是</td>
+<td>小规模、交换代价高</td>
+</tr>
+<tr>
+<td>插入排序</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>稳定</td>
+<td>是</td>
+<td>小规模、在线排序</td>
+</tr>
+<tr>
+<td>希尔排序</td>
+<td>O(n^1.3)</td>
+<td>O(1)</td>
+<td>不稳定</td>
+<td>是</td>
+<td>中等规模</td>
+</tr>
+<tr>
+<td>归并排序</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>稳定</td>
+<td>否</td>
+<td>大规模、链表、稳定性</td>
+</tr>
+<tr>
+<td>快速排序</td>
+<td>O(n log n)</td>
+<td>O(log n)</td>
+<td>不稳定</td>
+<td>是</td>
+<td>大规模、一般用途</td>
+</tr>
+<tr>
+<td>堆排序</td>
+<td>O(n log n)</td>
+<td>O(1)</td>
+<td>不稳定</td>
+<td>是</td>
+<td>固定复杂度、优先队列</td>
+</tr>
+<tr>
+<td>计数排序</td>
+<td>O(n + k)</td>
+<td>O(n + k)</td>
+<td>稳定</td>
+<td>否</td>
+<td>范围有限整数、稳定性</td>
+</tr>
+<tr>
+<td>桶排序</td>
+<td>O(n)</td>
+<td>O(n + k)</td>
+<td>稳定</td>
+<td>否</td>
+<td>均匀分布数据</td>
+</tr>
+<tr>
+<td>基数排序</td>
+<td>O(d * (n + k))</td>
+<td>O(n + k)</td>
+<td>稳定</td>
+<td>否</td>
+<td>大规模整数、多条件排序</td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[MyBatis]]></title>
+        <id>https://shengwei42.github.io/post/mybatis/</id>
+        <link href="https://shengwei42.github.io/post/mybatis/">
+        </link>
+        <updated>2025-03-05T04:04:17.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="mybatis简介">MyBatis简介</h1>
+<p>MyBatis最初是Apache的一个开源项目iBatis, 2010年6月这个项目由Apache Software Foundation迁移到了Google Code。随着开发团队转投Google Code旗下， iBatis3.x正式更名为MyBatis。代码于2013年11月迁移到Github。</p>
+<p>MyBatis 是一款优秀的持久层框架，它支持自定义 SQL、存储过程以及高级映射。MyBatis 免除了几乎所有的 JDBC 代码以及设置参数和获取结果集的工作。MyBatis 可以通过简单的 XML 或注解来配置和映射原始类型、接口和 Java POJO（Plain Old Java Objects，普通老式 Java 对象）为数据库中的记录。</p>
+<p><strong>推荐版本使用：3.5.11版本</strong></p>
+<h1 id="mybatis快速入门">MyBatis快速入门</h1>
+<ol>
+<li><strong>准备数据模型</strong></li>
+</ol>
+<pre><code class="language-SQL">CREATE DATABASE `mybatis-example`;
+
+USE `mybatis-example`;
+
+CREATE TABLE `t_emp`(
+  emp_id INT AUTO_INCREMENT,
+  emp_name CHAR(100),
+  emp_salary DOUBLE(10,5),
+  PRIMARY KEY(emp_id)
+);
+
+INSERT INTO `t_emp`(emp_name,emp_salary) VALUES(&quot;tom&quot;,200.33);
+INSERT INTO `t_emp`(emp_name,emp_salary) VALUES(&quot;jerry&quot;,666.66);
+INSERT INTO `t_emp`(emp_name,emp_salary) VALUES(&quot;andy&quot;,777.77);
+</code></pre>
+<ol start="2">
+<li>
+<p><strong>项目搭建</strong></p>
+</li>
+<li>
+<p><strong>依赖导入</strong></p>
+</li>
+</ol>
+<p>​	pom.xml</p>
+<pre><code class="language-XML">&lt;dependencies&gt;
+  &lt;!-- mybatis依赖 --&gt;
+  &lt;dependency&gt;
+      &lt;groupId&gt;org.mybatis&lt;/groupId&gt;
+      &lt;artifactId&gt;mybatis&lt;/artifactId&gt;
+      &lt;version&gt;3.5.11&lt;/version&gt;
+  &lt;/dependency&gt;
+
+  &lt;!-- MySQL驱动 mybatis底层依赖jdbc驱动实现,不需要导入连接池,mybatis自带! --&gt;
+  &lt;dependency&gt;
+      &lt;groupId&gt;mysql&lt;/groupId&gt;
+      &lt;artifactId&gt;mysql-connector-java&lt;/artifactId&gt;
+      &lt;version&gt;8.0.25&lt;/version&gt;
+  &lt;/dependency&gt;
+
+  &lt;!--junit5测试--&gt;
+  &lt;dependency&gt;
+      &lt;groupId&gt;org.junit.jupiter&lt;/groupId&gt;
+      &lt;artifactId&gt;junit-jupiter-api&lt;/artifactId&gt;
+      &lt;version&gt;5.3.1&lt;/version&gt;
+  &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
+<ol start="4">
+<li><strong>实体类准备</strong></li>
+</ol>
+<pre><code class="language-Java">public class Employee {
+
+    private Integer empId;
+
+    private String empName;
+
+    private Double empSalary;
+    
+    //getter | setter
+}
+</code></pre>
+<ol start="5">
+<li><strong>准备Mapper接口和MapperXML文件</strong></li>
+</ol>
+<p>​	MyBatis 框架下，SQL语句编写位置发生改变，从原来的Java类，改成<strong>XML</strong>或者注解定义！</p>
+<p>​	推荐在XML文件中编写SQL语句，让用户能更专注于 SQL 代码，不用关注其他的JDBC代码。</p>
+<p>​	如果拿它跟具有相同功能的 JDBC 代码进行对比，你会立即发现省掉了将近 95% 的代码！！</p>
+<p>​	一般编写SQL语句的文件命名：XxxMapper.xml  Xxx一般取表名！！</p>
+<p>​	Mybatis 中的 Mapper 接口相当于以前的 Dao。但是区别在于，Mapper 仅仅只是建接口即可，我们不需要提供实现类，具体的SQL写	到对应的Mapper文件</p>
+<p>​    5.1 定义mapper接口</p>
+<p>包：com.atguigu.mapper</p>
+<pre><code class="language-Java">package com.atguigu.mapper;
+import com.atguigu.pojo.Employee;
+public interface EmployeeMapper {
+    Employee selectEmployee(Integer empId);  
+}
+</code></pre>
+<p>​    5.2 定义mapper xml</p>
+<pre><code class="language-XML">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;
+&lt;!DOCTYPE mapper
+        PUBLIC &quot;-//mybatis.org//DTD Mapper 3.0//EN&quot;
+        &quot;https://mybatis.org/dtd/mybatis-3-mapper.dtd&quot;&gt;
+&lt;!-- namespace等于mapper接口类的全限定名,这样实现对应 --&gt;
+&lt;mapper namespace=&quot;com.atguigu.mapper.EmployeeMapper&quot;&gt;
+
+    &lt;select id=&quot;selectEmployee&quot; resultType=&quot;com.atguigu.pojo.Employee&quot;&gt;
+        &lt;!-- #{empId}代表动态传入的参数,并且进行赋值!后面详细讲解 --&gt;
+        select emp_id empId,emp_name empName, emp_salary empSalary from 
+           t_emp where emp_id = #{empId}
+    &lt;/select&gt;
+&lt;/mapper&gt;
+</code></pre>
+<ol start="6">
+<li><strong>准备MyBatis配置文件</strong></li>
+</ol>
+<p>​	mybatis框架配置文件： 数据库连接信息，性能配置，mapper.xml配置等！</p>
+<p>​	习惯上命名为 mybatis-config.xml，这个文件名仅仅只是建议，并非强制要求。</p>
+<pre><code class="language-XML">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;
+&lt;!DOCTYPE configuration
+  PUBLIC &quot;-//mybatis.org//DTD Config 3.0//EN&quot;
+  &quot;http://mybatis.org/dtd/mybatis-3-config.dtd&quot;&gt;
+&lt;configuration&gt;
+
+    &lt;settings&gt;
+        &lt;!--开启了mybatis的日志输出，且使用system在控制台输出--&gt;
+    	&lt;setting name=&quot;logImpl&quot; value=&quot;STDOUT_LOGGING&quot;/&gt;
+        &lt;!-- 开启驼峰式自动映射--&gt;
+        &lt;steting name=&quot;mapUnderscoreToCamelCase&quot; value=&quot;true&quot;/&gt;
+    &lt;/settings&gt;
+    &lt;!--定义别名--&gt;
+    &lt;typeAliases&gt;
+    	&lt;typeAliase type=&quot;com.atguigu.pojo.Employee&quot; alias=&quot;employee&quot;/&gt;
+    &lt;/typeAliases&gt;
+  &lt;!-- environments表示配置Mybatis的开发环境，可以配置多个环境，在众多具体环境中，使用default属性指定实际运行时使用的环境。default属性的取值是environment标签的id属性的值。 --&gt;
+  &lt;environments default=&quot;development&quot;&gt;
+    &lt;!-- environment表示配置Mybatis的一个具体的环境 --&gt;
+    &lt;environment id=&quot;development&quot;&gt;
+      &lt;!-- Mybatis的内置的事务管理器 --&gt;
+      &lt;transactionManager type=&quot;JDBC&quot;/&gt;
+      &lt;!-- 配置数据源 --&gt;
+      &lt;dataSource type=&quot;POOLED&quot;&gt;
+        &lt;!-- 建立数据库连接的具体信息 --&gt;
+        &lt;property name=&quot;driver&quot; value=&quot;com.mysql.cj.jdbc.Driver&quot;/&gt;
+        &lt;property name=&quot;url&quot; value=&quot;jdbc:mysql://localhost:3306/mybatis-example&quot;/&gt;
+        &lt;property name=&quot;username&quot; value=&quot;root&quot;/&gt;
+        &lt;property name=&quot;password&quot; value=&quot;zsw261923&quot;/&gt;
+      &lt;/dataSource&gt;
+    &lt;/environment&gt;
+  &lt;/environments&gt;
+
+  &lt;mappers&gt;
+    &lt;mapper resource=&quot;mappers/EmployeeMapper.xml&quot;/&gt;
+  &lt;/mappers&gt;
+
+&lt;/configuration&gt;
+</code></pre>
+<ol start="7">
+<li><strong>运行和测试</strong></li>
+</ol>
+<pre><code class="language-Java">public class MyBatisTest {
+
+    @Test
+    public void testSelectEmployee() throws IOException {
+
+        // 1.创建SqlSessionFactory对象
+        // ①声明Mybatis全局配置文件的路径
+        String mybatisConfigFilePath = &quot;mybatis-config.xml&quot;;
+
+        // ②以输入流的形式加载Mybatis配置文件
+        InputStream inputStream = Resources.getResourceAsStream(mybatisConfigFilePath);
+
+        // ③基于读取Mybatis配置文件的输入流创建SqlSessionFactory对象
+        SqlSessionFactory sessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+
+        // 2.使用SqlSessionFactory对象开启一个会话
+        SqlSession session = sessionFactory.openSession();
+
+        // 3.根据EmployeeMapper接口的Class对象获取Mapper接口类型的对象(动态代理技术)
+        EmployeeMapper employeeMapper = session.getMapper(EmployeeMapper.class);
+
+        // 4. 调用代理类方法既可以触发对应的SQL语句
+        Employee employee = employeeMapper.selectEmployee(1);
+
+        System.out.println(&quot;employee = &quot; + employee);
+
+        // 4.关闭SqlSession
+        session.commit(); //提交事务 [DQL不需要,其他需要]
+        session.close(); //关闭会话
+
+    }
+}
+</code></pre>
+<p>注意<code>#{}</code>与<code>${}</code>的区别！</p>
+<h1 id="数据输入">数据输入</h1>
+<p><strong>数据输入问题是指持久层中的方法参数输入给sql语句，sql语句如何通过<code>#{}</code>与<code>${}</code>取参的问题</strong></p>
+<ul>
+<li>单个基本类型：直接取参即可，建议名字与参数名称一致</li>
+<li>单个实体对象：直接取对象的成员(属性)即可，不用加<code>.</code>符号</li>
+<li>多个简单类型：
+<ul>
+<li>给方法参数加上<code>@Param(&quot;id&quot;)</code>注解，并通过id取值</li>
+<li>形参从左至右默认id为<code>arg0,arg1,arg2…</code></li>
+<li>形参从左至右默认id为<code>param1,param2,param3…</code></li>
+</ul>
+</li>
+<li>Map类型：与Map的key值保持一致</li>
+</ul>
+<h1 id="数据输出">数据输出</h1>
+<p><strong>数据输出问题是指<code>resultType</code>的值，即方法返回类型如何书写</strong></p>
+<p><strong>注意：数据输出一般是针对查询语句，而不针对非查询语句，因为非查询语句的返回结果一般恒为影响的行数，不用特意指定</strong></p>
+<ul>
+<li>实体类型：直接写类的全限定符或别名<br>
+注：返回实体类型时，要求列名与属性名保持一致，这样才会进行实体类的属性映射<br>
+通过<code>mybatis-config.xml</code>配置文件开启驼峰式自动映射即可，因为数据库中一般使用下划线命名，Java使用驼峰命名法</li>
+<li>有别名的数据类型：使用其别名即可，例如基本数据类型，包装类型和一些引用类型</li>
+<li>Map类型：若返回的结果不能包装成实体类，还想保留key，则需要返回map类型，直接写<code>map</code>即可</li>
+<li>集合类型：直接写其泛型即可，因为mybatis底层本身就是通过selectList()查询的</li>
+</ul>
+<p><strong>主键回显：主键回显是指向表中插入数据后，返回数据的主键，以便后续的操作</strong></p>
+<ul>
+<li>自增长类型的主键</li>
+</ul>
+<pre><code class="language-xml">&lt;insert id=&quot;insertEmp&quot; useGeneratedKeys=&quot;true&quot; keyColumn=&quot;emp_id&quot; keyProperty=&quot;empId&quot;&gt;
+	insert into t_emp(emp_name,emp_salary) value(#{empName},#{empSalary});
+&lt;/insert&gt;
+&lt;!--注意：Mybatis是将自增主键的值设置到实体类对象中（作为参数的对象），而不是以Mapper接口方法返回值的形式返回--&gt;
+</code></pre>
+<ul>
+<li>非自增长类型的主键</li>
+</ul>
+<pre><code class="language-xml">&lt;!--对于非自增长的主键，我们期望交给mybatis维护--&gt;
+&lt;insert id=&quot;insertTeacher&quot;&gt;
+	&lt;!--插入之前，先指定一段sql代码，生成一个主键值--&gt;
+    &lt;selectKey order=&quot;BEFORE&quot; resultType=&quot;string&quot; keyProperty=&quot;tId&quot;&gt;
+    	select replace(UUID(),'-','');
+    &lt;/selectKey&gt;
+    insert into teacher(t_id,t_name) value(#{tId},#{tName});
+&lt;/insert&gt;
+</code></pre>
+<h1 id="类型别名">类型别名</h1>
+<ul>
+<li>基本数据类型：别名在原名之前加<code>_</code></li>
+<li>包装类型：原名改成小写</li>
+<li>引用数据类型：原名改成小写</li>
+<li>自定义类型：
+<ul>
+<li>直接写类的全限定符</li>
+<li>通过<code>mybatis-config.xml</code>配置文件使用<code>&lt;typeAliase&gt;</code>标签取别名</li>
+</ul>
+</li>
+</ul>
+<h1 id="自定义映射关系">自定义映射关系</h1>
+<p>列名与属性名不一致如何解决：</p>
+<ul>
+<li>
+<p>取别名：例如<code>select t_id tId,t_name tName from teacher where t_id=#{tId}</code></p>
+</li>
+<li>
+<p>开启驼峰式自动映射</p>
+</li>
+<li>
+<p>resultMap自定义映射（resultType和resultMap二选一）<br>
+resultType按照规则自动映射，按照是否开启驼峰式映射，自己映射属性名与列名！但只能映射一层结构！<br>
+深层次的对象结构无法映射，多表查询的时候结果无法映射！而resultMap可以做到！</p>
+<pre><code class="language-xml">&lt;resultMap id=&quot;tMap&quot; type=&quot;teacher&quot;&gt; &lt;!--teacher为返回类型，参照数据输出的规则--&gt;
+	&lt;id column=&quot;t_id&quot; property=&quot;tId&quot;/&gt;  &lt;!-- id标签里写主键的映射--&gt;
+    &lt;result column=&quot;t_name&quot; property=&quot;tName&quot;/&gt;  &lt;!-- result标签里写非主键的映射--&gt;
+&lt;/resultMap&gt;
+&lt;select id=&quot;queryById&quot; resultMap=&quot;tMap&quot;&gt;
+	select * from teacher where t_id=#{tId};
+&lt;/select&gt;
+</code></pre>
+</li>
+</ul>
+<h1 id="mybatis多表映射">MyBatis多表映射</h1>
+<p><strong>多表映射关键在于实体类的设计与xml文件的编写！</strong></p>
+<h2 id="一对一映射">一对一映射</h2>
+<ol>
+<li>
+<p>需求说明</p>
+<p>根据ID查询订单，以及订单关联的用户的信息！</p>
+</li>
+<li>
+<p>OrderMapper接口</p>
+</li>
+</ol>
+<pre><code class="language-Java">public interface OrderMapper {
+  Order selectOrderWithCustomer(Integer orderId);
+}
+</code></pre>
+<ol start="3">
+<li>OrderMapper.xml配置文件</li>
+</ol>
+<pre><code class="language-XML">&lt;!-- 创建resultMap实现“对一”关联关系映射 --&gt;
+&lt;!-- id属性：通常设置为这个resultMap所服务的那条SQL语句的id加上“ResultMap” --&gt;
+&lt;!-- type属性：要设置为这个resultMap所服务的那条SQL语句最终要返回的类型 --&gt;
+&lt;resultMap id=&quot;selectOrderWithCustomerResultMap&quot; type=&quot;order&quot;&gt;
+
+  &lt;!-- 先设置Order主键 --&gt;
+  &lt;id column=&quot;order_id&quot; property=&quot;orderId&quot;/&gt;
+  &lt;!--设置普通成员映射--&gt;
+  &lt;result column=&quot;order_name&quot; property=&quot;orderName&quot;/&gt;
+  &lt;!-- 使用association标签配置“对一”关联关系 --&gt;
+  &lt;!-- property属性：在Order类中对一的一端进行引用时使用的属性名 --&gt;
+  &lt;!-- javaType属性：一的一端类的全类名 --&gt;
+  &lt;association property=&quot;customer&quot; javaType=&quot;customer&quot;&gt;
+
+    &lt;!-- 配置Customer类的属性和字段名之间的对应关系 --&gt;
+    &lt;id column=&quot;customer_id&quot; property=&quot;customerId&quot;/&gt;
+    &lt;result column=&quot;customer_name&quot; property=&quot;customerName&quot;/&gt;
+
+  &lt;/association&gt;
+
+&lt;/resultMap&gt;
+
+
+&lt;select id=&quot;selectOrderWithCustomer&quot; resultMap=&quot;selectOrderWithCustomerResultMap&quot;&gt;
+
+  SELECT order_id,order_name,c.customer_id,customer_name
+  FROM t_order o
+  LEFT JOIN t_customer c
+  ON o.customer_id=c.customer_id
+  WHERE o.order_id=#{orderId}
+
+&lt;/select&gt;
+</code></pre>
+<h2 id="一对多映射">一对多映射</h2>
+<ol>
+<li>
+<p>需求说明</p>
+<p>查询客户和客户关联的订单信息！</p>
+</li>
+<li>
+<p>CustomerMapper接口</p>
+</li>
+</ol>
+<pre><code class="language-Java">public interface CustomerMapper {
+
+  Customer selectCustomerWithOrderList(Integer customerId);
+
+}
+</code></pre>
+<ol start="3">
+<li>CustomerMapper.xml文件</li>
+</ol>
+<pre><code class="language-xml">&lt;!-- 配置resultMap实现从Customer到OrderList的“对多”关联关系 --&gt;
+&lt;resultMap id=&quot;selectCustomerWithOrderListResultMap&quot; type=&quot;customer&quot;&gt;
+
+  &lt;!-- 映射Customer本身的属性 --&gt;
+  &lt;id column=&quot;customer_id&quot; property=&quot;customerId&quot;/&gt;
+
+  &lt;result column=&quot;customer_name&quot; property=&quot;customerName&quot;/&gt;
+
+  &lt;!-- collection标签：映射“对多”的关联关系 --&gt;
+  &lt;!-- property属性：在Customer类中，关联“多”的一端的属性名 --&gt;
+  &lt;!-- ofType属性：集合属性中元素的类型 --&gt;
+  &lt;collection property=&quot;orderList&quot; ofType=&quot;order&quot;&gt;
+
+    &lt;!-- 映射Order的属性 --&gt;
+    &lt;id column=&quot;order_id&quot; property=&quot;orderId&quot;/&gt;
+
+    &lt;result column=&quot;order_name&quot; property=&quot;orderName&quot;/&gt;
+
+  &lt;/collection&gt;
+
+&lt;/resultMap&gt;
+
+&lt;!-- Customer selectCustomerWithOrderList(Integer customerId); --&gt;
+&lt;select id=&quot;selectCustomerWithOrderList&quot; resultMap=&quot;selectCustomerWithOrderListResultMap&quot;&gt;
+  SELECT c.customer_id,c.customer_name,o.order_id,o.order_name
+  FROM t_customer c
+  LEFT JOIN t_order o
+  ON c.customer_id=o.customer_id
+  WHERE c.customer_id=#{customerId}
+&lt;/select&gt;
+</code></pre>
+<h2 id="多表查询优化">多表查询优化</h2>
+<p>可以设置<code>autoMappingBehavior</code>属性来指定MyBatis如何自动映射列到字段或属性。NONE表示关闭自动映射；PARTIAL只会自动映射没有定义嵌套的字段；FULL会自动映射任意层次的字段。</p>
+<pre><code class="language-xml">&lt;setting name=&quot;autoMappingBehavior&quot; value=&quot;FULL&quot;/&gt;
+</code></pre>
+<p>设置该属性之后，<code>&lt;result&gt;</code>标签内的字段如果符合驼峰式映射，就不用再写了！</p>
+<h1 id="mybatis动态语句">MyBatis动态语句</h1>
+<h2 id="动态语句需求和简介">动态语句需求和简介</h2>
+<p>经常遇到很多按照很多查询条件进行查询的情况，比如智联招聘的职位搜索等。其中经常出现很多条件不取值的情况，在后台应该如何完成最终的SQL语句呢？</p>
+<p>动态 SQL 是 MyBatis 的强大特性之一。如果你使用过 JDBC 或其它类似的框架，你应该能理解根据不同条件拼接 SQL 语句有多痛苦，例如拼接时要确保不能忘记添加必要的空格，还要注意去掉列表最后一个列名的逗号。利用动态 SQL，可以彻底摆脱这种痛苦。</p>
+<p>使用动态 SQL 并非一件易事，但借助可用于任何 SQL 映射语句中的强大的动态 SQL 语言，MyBatis 显著地提升了这一特性的易用性。</p>
+<h2 id="if和where标签">if和where标签</h2>
+<p>使用动态 SQL 最常见情景是根据条件包含 where  / if 子句的一部分。比如：</p>
+<pre><code class="language-XML">&lt;!-- List&lt;Employee&gt; selectEmployeeByCondition(Employee employee); --&gt;
+&lt;select id=&quot;selectEmployeeByCondition&quot; resultType=&quot;employee&quot;&gt;
+    select emp_id,emp_name,emp_salary from t_emp
+    &lt;!-- where标签会自动去掉“标签体内前面多余的and/or” --&gt;
+    &lt;where&gt;
+        &lt;!-- 在if标签的test属性中，可以访问实体类的属性，不可以访问数据库表的字段 --&gt;
+        &lt;if test=&quot;empName != null&quot;&gt;
+            &lt;!-- 在if标签内部，需要访问接口的参数时还是正常写#{} --&gt;
+            or emp_name=#{empName}
+        &lt;/if&gt;
+        &lt;if test=&quot;empSalary &amp;gt; 2000&quot;&gt;
+            or emp_salary&gt;#{empSalary}
+        &lt;/if&gt;
+    &lt;/where&gt;
+&lt;/select&gt;
+</code></pre>
+<h2 id="set标签">set标签</h2>
+<pre><code class="language-XML">&lt;!-- void updateEmployeeDynamic(Employee employee) --&gt;
+&lt;update id=&quot;updateEmployeeDynamic&quot;&gt;
+    update t_emp
+    &lt;!-- 使用set标签动态管理set子句，并且动态去掉两端多余的逗号 --&gt;
+    &lt;set&gt;
+        &lt;if test=&quot;empName != null&quot;&gt;
+            emp_name=#{empName},
+        &lt;/if&gt;
+        &lt;if test=&quot;empSalary &amp;lt; 3000&quot;&gt;
+            emp_salary=#{empSalary},
+        &lt;/if&gt;
+    &lt;/set&gt;
+    where emp_id=#{empId}
+    &lt;!--
+         第一种情况：所有条件都满足 SET emp_name=?, emp_salary=?
+         第二种情况：部分条件满足 SET emp_salary=?
+         第三种情况：所有条件都不满足 update t_emp where emp_id=?
+            没有set子句的update语句会导致SQL语法错误
+     --&gt;
+&lt;/update&gt;
+</code></pre>
+<h2 id="trim标签">trim标签</h2>
+<p>使用trim标签控制条件部分两端是否包含某些字符</p>
+<ul>
+<li>prefix属性：指定要动态添加的前缀</li>
+<li>suffix属性：指定要动态添加的后缀</li>
+<li>prefixOverrides属性：指定要动态去掉的前缀，使用“|”分隔有可能的多个值</li>
+<li>suffixOverrides属性：指定要动态去掉的后缀，使用“|”分隔有可能的多个值</li>
+</ul>
+<pre><code class="language-XML">&lt;!-- List&lt;Employee&gt; selectEmployeeByConditionByTrim(Employee employee) --&gt;
+&lt;select id=&quot;selectEmployeeByConditionByTrim&quot; resultType=&quot;com.atguigu.mybatis.entity.Employee&quot;&gt;
+    select emp_id,emp_name,emp_age,emp_salary,emp_gender
+    from t_emp
+    &lt;!-- 当前例子用where标签实现更简洁，但是trim标签更灵活，可以用在任何有需要的地方 --&gt;
+    &lt;trim prefix=&quot;where&quot; suffixOverrides=&quot;and|or&quot;&gt;
+        &lt;if test=&quot;empName != null&quot;&gt;
+            emp_name=#{empName} and
+        &lt;/if&gt;
+        &lt;if test=&quot;empSalary &amp;gt; 3000&quot;&gt;
+            emp_salary&gt;#{empSalary} and
+        &lt;/if&gt;
+        &lt;if test=&quot;empAge &amp;lt;= 20&quot;&gt;
+            emp_age=#{empAge} or
+        &lt;/if&gt;
+        &lt;if test=&quot;empGender=='male'&quot;&gt;
+            emp_gender=#{empGender}
+        &lt;/if&gt;
+    &lt;/trim&gt;
+&lt;/select&gt;
+</code></pre>
+<h2 id="choosewhenotherwise标签">choose/when/otherwise标签</h2>
+<p>在多个分支条件中，仅执行一个。</p>
+<ul>
+<li>从上到下依次执行条件判断</li>
+<li>遇到的第一个满足条件的分支会被采纳</li>
+<li>被采纳分支后面的分支都将不被考虑</li>
+<li>如果所有的when分支都不满足，那么就执行otherwise分支</li>
+</ul>
+<pre><code class="language-XML">&lt;!-- List&lt;Employee&gt; selectEmployeeByConditionByChoose(Employee employee) --&gt;
+&lt;select id=&quot;selectEmployeeByConditionByChoose&quot; resultType=&quot;com.atguigu.mybatis.entity.Employee&quot;&gt;
+    select emp_id,emp_name,emp_salary from t_emp
+    where
+    &lt;choose&gt;
+        &lt;when test=&quot;empName != null&quot;&gt;emp_name=#{empName}&lt;/when&gt;
+        &lt;when test=&quot;empSalary &amp;lt; 3000&quot;&gt;emp_salary &amp;lt; 3000&lt;/when&gt;
+        &lt;otherwise&gt;1=1&lt;/otherwise&gt;
+    &lt;/choose&gt;
+    
+    &lt;!--
+     第一种情况：第一个when满足条件 where emp_name=?
+     第二种情况：第二个when满足条件 where emp_salary &lt; 3000
+     第三种情况：两个when都不满足 where 1=1 执行了otherwise
+     --&gt;
+&lt;/select&gt;
+</code></pre>
+<h2 id="foreach标签">foreach标签</h2>
+<p><strong>基本用法</strong></p>
+<p>用批量插入举例</p>
+<pre><code class="language-XML">&lt;!--
+    collection属性：要遍历的集合
+    item属性：遍历集合的过程中能得到每一个具体对象，在item属性中设置一个名字，将来通过这个名字引用遍历出来的对象
+    separator属性：指定当foreach标签的标签体重复拼接字符串时，各个标签体字符串之间的分隔符
+    open属性：指定整个循环把字符串拼好后，字符串整体的前面要添加的字符串
+    close属性：指定整个循环把字符串拼好后，字符串整体的后面要添加的字符串
+    index属性：这里起一个名字，便于后面引用
+        遍历List集合，这里能够得到List集合的索引值
+        遍历Map集合，这里能够得到Map集合的key
+ --&gt;
+&lt;foreach collection=&quot;empList&quot; item=&quot;emp&quot; separator=&quot;,&quot; open=&quot;values&quot; index=&quot;myIndex&quot;&gt;
+    &lt;!-- 在foreach标签内部如果需要引用遍历得到的具体的一个对象，需要使用item属性声明的名称 --&gt;
+    (#{emp.empName},#{myIndex},#{emp.empSalary},#{emp.empGender})
+&lt;/foreach&gt;
+</code></pre>
+<p><strong>批量更新时需要注意</strong></p>
+<p>上面批量插入的例子本质上是一条SQL语句，而实现批量更新则需要多条SQL语句拼起来，用分号分开。也就是一次性发送多条SQL语句让数据库执行。此时需要在数据库连接信息的URL地址中设置：</p>
+<pre><code class="language-.properties">atguigu.dev.url=jdbc:mysql:///mybatis-example?allowMultiQueries=true
+</code></pre>
+<p>对应的foreach标签如下：</p>
+<pre><code class="language-XML">&lt;!-- int updateEmployeeBatch(@Param(&quot;empList&quot;) List&lt;Employee&gt; empList) --&gt;
+&lt;update id=&quot;updateEmployeeBatch&quot;&gt;
+    &lt;foreach collection=&quot;empList&quot; item=&quot;emp&quot; separator=&quot;;&quot;&gt;
+        update t_emp set emp_name=#{emp.empName} where emp_id=#{emp.empId}
+    &lt;/foreach&gt;
+&lt;/update&gt;
+</code></pre>
+<p><strong>关于foreach标签的collection属性</strong></p>
+<p>如果没有给接口中List类型的参数使用@Param注解指定一个具体的名字，那么在collection属性中默认可以使用collection或list来引用这个list集合。这一点可以通过异常信息看出来：</p>
+<pre><code class="language-XML">Parameter 'empList' not found. Available parameters are [arg0, collection, list]
+</code></pre>
+<p>在实际开发中，为了避免隐晦的表达造成一定的误会，建议使用@Param注解明确声明变量的名称，然后在foreach标签的collection属性中按照@Param注解指定的名称来引用传入的参数。</p>
+<h2 id="sql片段">sql片段</h2>
+<p><strong>抽取重复的SQL片段</strong></p>
+<pre><code class="language-XML">&lt;!-- 使用sql标签抽取重复出现的SQL片段 --&gt;
+&lt;sql id=&quot;mySelectSql&quot;&gt;
+    select emp_id,emp_name,emp_age,emp_salary,emp_gender from t_emp
+&lt;/sql&gt;
+</code></pre>
+<p>引用已抽取的SQL片段</p>
+<pre><code class="language-XML">&lt;!-- 使用include标签引用声明的SQL片段 --&gt;
+&lt;include refid=&quot;mySelectSql&quot;/&gt;
+</code></pre>
+<h1 id="mybatis高级拓展">MyBatis高级拓展</h1>
+<h2 id="mybatis批量映射优化">MyBatis批量映射优化</h2>
+<ol>
+<li>
+<p>需求</p>
+<p>Mapper 配置文件很多时，在全局配置文件中一个一个注册太麻烦，希望有一个办法能够一劳永逸。</p>
+</li>
+<li>
+<p>配置方式</p>
+<p>Mybatis 允许在指定 Mapper 映射文件时，只指定其所在的包：</p>
+</li>
+</ol>
+<pre><code class="language-XML">&lt;mappers&gt;
+    &lt;package name=&quot;com.atguigu.mapper&quot;/&gt;
+&lt;/mappers&gt;
+&lt;!--此时这个包下的所有 Mapper 配置文件将被自动加载、注册，比较方便。--&gt;
+</code></pre>
+<ol start="3">
+<li>资源创建要求</li>
+</ol>
+<ul>
+<li>Mapper 接口和 Mapper 配置文件名称一致
+<ul>
+<li>Mapper 接口：EmployeeMapper.java</li>
+<li>Mapper 配置文件：EmployeeMapper.xml</li>
+</ul>
+</li>
+<li>在src下的resources下创建与接口一致的文件夹结构存放xml文件</li>
+</ul>
+<h2 id="插件与分页插件pagehelper">插件与分页插件PageHelper</h2>
+<p><strong>插件机制介绍</strong></p>
+<p>MyBatis 对插件进行了标准化的设计，并提供了一套可扩展的插件机制。插件可以在用于语句执行过程中进行拦截，并允许通过自定义处理程序来拦截和修改 SQL 语句、映射语句的结果等。</p>
+<p>具体来说，MyBatis 的插件机制包括以下三个组件：</p>
+<ol>
+<li><code>Interceptor</code>（拦截器）：定义一个拦截方法 <code>intercept</code>，该方法在执行 SQL 语句、执行查询、查询结果的映射时会被调用。</li>
+<li><code>Invocation</code>（调用）：实际上是对被拦截的方法的封装，封装了 <code>Object target</code>、<code>Method method</code> 和 <code>Object[] args</code> 这三个字段。</li>
+<li><code>InterceptorChain</code>（拦截器链）：对所有的拦截器进行管理，包括将所有的 Interceptor 链接成一条链，并在执行 SQL 语句时按顺序调用。</li>
+</ol>
+<p>插件的开发非常简单，只需要实现 Interceptor 接口，并使用注解 <code>@Intercepts</code> 来标注需要拦截的对象和方法，然后在 MyBatis 的配置文件中添加插件即可。</p>
+<p>PageHelper 是 MyBatis 中比较著名的分页插件，它提供了多种分页方式（例如 MySQL 和 Oracle 分页方式），支持多种数据库，并且使用非常简单。下面就介绍一下 PageHelper 的使用方式。</p>
+<p><strong>PageHelper插件使用</strong></p>
+<ol>
+<li>pom.xml引入依赖</li>
+</ol>
+<pre><code class="language-XML">&lt;dependency&gt;
+    &lt;groupId&gt;com.github.pagehelper&lt;/groupId&gt;
+    &lt;artifactId&gt;pagehelper&lt;/artifactId&gt;
+    &lt;version&gt;5.1.11&lt;/version&gt;
+&lt;/dependency&gt;
+
+</code></pre>
+<ol start="2">
+<li>
+<p>mybatis-config.xml配置分页插件</p>
+<p>在 MyBatis 的配置文件中添加 PageHelper 的插件：</p>
+</li>
+</ol>
+<pre><code class="language-XML">&lt;plugins&gt;
+    &lt;plugin interceptor=&quot;com.github.pagehelper.PageInterceptor&quot;&gt;
+        &lt;property name=&quot;helperDialect&quot; value=&quot;mysql&quot;/&gt;
+    &lt;/plugin&gt;
+&lt;/plugins&gt;
+其中，`com.github.pagehelper.PageInterceptor` 是 PageHelper 插件的名称，`dialect` 属性用于指定数据库类型（支持多种数据库）
+</code></pre>
+<ol start="3">
+<li>
+<p>页插件使用</p>
+<p>在查询方法中使用分页：</p>
+</li>
+</ol>
+<pre><code class="language-Java">@Test
+public void testTeacherRelationshipToMulti() {
+
+    TeacherMapper teacherMapper = session.getMapper(TeacherMapper.class);
+
+    PageHelper.startPage(1,2);
+    // 查询Customer对象同时将关联的Order集合查询出来
+    List&lt;Teacher&gt; allTeachers = teacherMapper.findAllTeachers();
+    PageInfo&lt;Teacher&gt; pageInfo = new PageInfo&lt;&gt;(allTeachers);
+
+    System.out.println(&quot;pageInfo = &quot; + pageInfo);
+    long total = pageInfo.getTotal(); // 获取总记录数
+    System.out.println(&quot;total = &quot; + total);
+    int pages = pageInfo.getPages();  // 获取总页数
+    System.out.println(&quot;pages = &quot; + pages);
+    int pageNum = pageInfo.getPageNum(); // 获取当前页码
+    System.out.println(&quot;pageNum = &quot; + pageNum);
+    int pageSize = pageInfo.getPageSize(); // 获取每页显示记录数
+    System.out.println(&quot;pageSize = &quot; + pageSize);
+    List&lt;Teacher&gt; teachers = pageInfo.getList(); //获取查询页的数据集合
+    System.out.println(&quot;teachers = &quot; + teachers);
+    teachers.forEach(System.out::println);
+
+}
+</code></pre>
+<h2 id="逆向工程和mybatisx插件">逆向工程和MyBatisX插件</h2>
+<h3 id="orm思维">ORM思维</h3>
+<p>ORM（Object-Relational Mapping，对象-关系映射）是一种将数据库和面向对象编程语言中的对象之间进行转换的技术。它将对象和关系数据库的概念进行映射，最后我们就可以通过方法调用进行数据库操作!!</p>
+<p>最终: <strong>让我们可以使用面向对象思维进行数据库操作！！！</strong></p>
+<p><strong>ORM 框架通常有半自动和全自动两种方式。</strong></p>
+<ul>
+<li>半自动 ORM 通常需要程序员手动编写 SQL 语句或者配置文件，将实体类和数据表进行映射，还需要手动将查询的结果集转换成实体对象。</li>
+<li>全自动 ORM 则是将实体类和数据表进行自动映射，使用 API 进行数据库操作时，ORM 框架会自动执行 SQL 语句并将查询结果转换成实体对象，程序员无需再手动编写 SQL 语句和转换代码。</li>
+</ul>
+<p><strong>下面是半自动和全自动 ORM 框架的区别：</strong></p>
+<ol>
+<li>映射方式：半自动 ORM 框架需要程序员手动指定实体类和数据表之间的映射关系，通常使用 XML 文件或注解方式来指定；全自动 ORM 框架则可以自动进行实体类和数据表的映射，无需手动干预。</li>
+<li>查询方式：半自动 ORM 框架通常需要程序员手动编写 SQL 语句并将查询结果集转换成实体对象；全自动 ORM 框架可以自动组装 SQL 语句、执行查询操作，并将查询结果转换成实体对象。</li>
+<li>性能：由于半自动 ORM 框架需要手动编写 SQL 语句，因此程序员必须对 SQL 语句和数据库的底层知识有一定的了解，才能编写高效的 SQL 语句；而全自动 ORM 框架通过自动优化生成的 SQL 语句来提高性能，程序员无需进行优化。</li>
+<li>学习成本：半自动 ORM 框架需要程序员手动编写 SQL 语句和映射配置，要求程序员具备较高的数据库和 SQL 知识；全自动 ORM 框架可以自动生成 SQL 语句和映射配置，程序员无需了解过多的数据库和 SQL 知识。</li>
+</ol>
+<p>常见的半自动 ORM 框架包括 MyBatis 等；常见的全自动 ORM 框架包括 Hibernate、Spring Data JPA、MyBatis-Plus 等。</p>
+<h3 id="逆向工程">逆向工程</h3>
+<p>MyBatis 的逆向工程是一种自动化生成持久层代码和映射文件的工具，它可以根据数据库表结构和设置的参数生成对应的实体类、Mapper.xml 文件、Mapper 接口等代码文件，简化了开发者手动生成的过程。逆向工程使开发者可以快速地构建起 DAO 层，并快速上手进行业务开发。</p>
+<p>MyBatis 的逆向工程有两种方式：通过 MyBatis Generator 插件实现和通过 Maven 插件实现。无论是哪种方式，逆向工程一般需要指定一些配置参数，例如数据库连接 URL、用户名、密码、要生成的表名、生成的文件路径等等。<br>
+总的来说，MyBatis 的逆向工程为程序员提供了一种方便快捷的方式，能够快速地生成持久层代码和映射文件，是半自动 ORM 思维像全自动发展的过程，提高程序员的开发效率。</p>
+<p><strong>注意：逆向工程只能生成单表crud的操作，多表查询依然需要我们自己编写！</strong></p>
+<h3 id="mybatisx使用">MyBatisX使用</h3>
+<p>MyBatisX 是一个 MyBatis 的代码生成插件，可以通过简单的配置和操作快速生成 MyBatis Mapper、pojo 类和 Mapper.xml 文件。下面是使用 MyBatisX 插件实现逆向工程的步骤：</p>
+<ol>
+<li>
+<p>安装插件：</p>
+<p>在 IntelliJ IDEA 中打开插件市场，搜索 MyBatisX 并安装。</p>
+</li>
+<li>
+<p>​    使用 IntelliJ IDEA连接数据库并填写信息</p>
+</li>
+<li>
+<p>查看生成结果</p>
+</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[常用Linux命令]]></title>
+        <id>https://shengwei42.github.io/post/chang-yong-linux-ming-ling/</id>
+        <link href="https://shengwei42.github.io/post/chang-yong-linux-ming-ling/">
+        </link>
+        <updated>2025-03-05T04:02:40.000Z</updated>
+        <content type="html"><![CDATA[<table>
+<thead>
+<tr>
+<th style="text-align:left">命令</th>
+<th style="text-align:left">功能说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><mark>线上查询及帮助命令 (2 个)</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">man</td>
+<td style="text-align:left">查看命令帮助，命令的词典，更复杂的还有 info，但不常用。</td>
+</tr>
+<tr>
+<td style="text-align:left">help</td>
+<td style="text-align:left">查看 Linux 内置命令的帮助，比如 cd 命令。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>文件和目录操作命令 (18 个)</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">ls</td>
+<td style="text-align:left">全拼 list，功能是列出目录的内容及其内容属性信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">cd</td>
+<td style="text-align:left">全拼 change directory，功能是从当前工作目录切换到指定的工作目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">cp</td>
+<td style="text-align:left">全拼 copy，其功能为复制文件或目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">find</td>
+<td style="text-align:left">查找的意思，用于查找目录及目录下的文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">mkdir</td>
+<td style="text-align:left">全拼 make directories，其功能是创建目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">mv</td>
+<td style="text-align:left">全拼 move，其功能是移动或重命名文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">pwd</td>
+<td style="text-align:left">全拼 print working directory，其功能是显示当前工作目录的绝对路径。</td>
+</tr>
+<tr>
+<td style="text-align:left">rename</td>
+<td style="text-align:left">用于重命名文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">rm</td>
+<td style="text-align:left">全拼 remove，其功能是删除一个或多个文件或目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">rmdir</td>
+<td style="text-align:left">全拼 remove empty directories，功能是删除空目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">touch</td>
+<td style="text-align:left">创建新的空文件，改变已有文件的时间戳属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">tree</td>
+<td style="text-align:left">功能是以树形结构显示目录下的内容。</td>
+</tr>
+<tr>
+<td style="text-align:left">basename</td>
+<td style="text-align:left">显示文件名或目录名。</td>
+</tr>
+<tr>
+<td style="text-align:left">dirname</td>
+<td style="text-align:left">显示文件或目录路径。</td>
+</tr>
+<tr>
+<td style="text-align:left">chattr</td>
+<td style="text-align:left">改变文件的扩展属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">lsattr</td>
+<td style="text-align:left">查看文件扩展属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">file</td>
+<td style="text-align:left">显示文件的类型。</td>
+</tr>
+<tr>
+<td style="text-align:left">md5sum</td>
+<td style="text-align:left">计算和校验文件的 MD5 值。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>查看文件及内容处理命令（21 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">cat</td>
+<td style="text-align:left">全拼 concatenate，功能是用于连接多个文件并且打印到屏幕输出或重定向到指定文件中。</td>
+</tr>
+<tr>
+<td style="text-align:left">tac</td>
+<td style="text-align:left">tac 是 cat 的反向拼写，因此命令的功能为反向显示文件内容。</td>
+</tr>
+<tr>
+<td style="text-align:left">more</td>
+<td style="text-align:left">分页显示文件内容。</td>
+</tr>
+<tr>
+<td style="text-align:left">less</td>
+<td style="text-align:left">分页显示文件内容，more 命令的相反用法。</td>
+</tr>
+<tr>
+<td style="text-align:left">head</td>
+<td style="text-align:left">显示文件内容的头部。</td>
+</tr>
+<tr>
+<td style="text-align:left">tail</td>
+<td style="text-align:left">显示文件内容的尾部。</td>
+</tr>
+<tr>
+<td style="text-align:left">cut</td>
+<td style="text-align:left">将文件的每一行按指定分隔符分割并输出。</td>
+</tr>
+<tr>
+<td style="text-align:left">split</td>
+<td style="text-align:left">分割文件为不同的小片段。</td>
+</tr>
+<tr>
+<td style="text-align:left">paste</td>
+<td style="text-align:left">按行合并文件内容。</td>
+</tr>
+<tr>
+<td style="text-align:left">sort</td>
+<td style="text-align:left">对文件的文本内容排序。</td>
+</tr>
+<tr>
+<td style="text-align:left">uniq</td>
+<td style="text-align:left">去除重复行。oldboy</td>
+</tr>
+<tr>
+<td style="text-align:left">wc</td>
+<td style="text-align:left">统计文件的行数、单词数或字节数。</td>
+</tr>
+<tr>
+<td style="text-align:left">iconv</td>
+<td style="text-align:left">转换文件的编码格式。</td>
+</tr>
+<tr>
+<td style="text-align:left">dos2unix</td>
+<td style="text-align:left">将 DOS 格式文件转换成 UNIX 格式。</td>
+</tr>
+<tr>
+<td style="text-align:left">diff</td>
+<td style="text-align:left">全拼 difference，比较文件的差异，常用于文本文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">vimdiff</td>
+<td style="text-align:left">命令行可视化文件比较工具，常用于文本文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">rev</td>
+<td style="text-align:left">反向输出文件内容。</td>
+</tr>
+<tr>
+<td style="text-align:left">grep/egrep</td>
+<td style="text-align:left">过滤字符串，三剑客老三。</td>
+</tr>
+<tr>
+<td style="text-align:left">join</td>
+<td style="text-align:left">按两个文件的相同字段合并。</td>
+</tr>
+<tr>
+<td style="text-align:left">tr</td>
+<td style="text-align:left">替换或删除字符。</td>
+</tr>
+<tr>
+<td style="text-align:left">vi/vim</td>
+<td style="text-align:left">命令行文本编辑器。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>文件压缩及解压缩命令（4 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">tar</td>
+<td style="text-align:left">打包压缩。oldboy</td>
+</tr>
+<tr>
+<td style="text-align:left">unzip</td>
+<td style="text-align:left">解压文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">gzip</td>
+<td style="text-align:left">gzip 压缩工具。</td>
+</tr>
+<tr>
+<td style="text-align:left">zip</td>
+<td style="text-align:left">压缩工具。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>信息显示命令（11 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">uname</td>
+<td style="text-align:left">显示操作系统相关信息的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">hostname</td>
+<td style="text-align:left">显示或者设置当前系统的主机名。</td>
+</tr>
+<tr>
+<td style="text-align:left">dmesg</td>
+<td style="text-align:left">显示开机信息，用于诊断系统故障。</td>
+</tr>
+<tr>
+<td style="text-align:left">uptime</td>
+<td style="text-align:left">显示系统运行时间及负载。</td>
+</tr>
+<tr>
+<td style="text-align:left">stat</td>
+<td style="text-align:left">显示文件或文件系统的状态。</td>
+</tr>
+<tr>
+<td style="text-align:left">du</td>
+<td style="text-align:left">计算磁盘空间使用情况。</td>
+</tr>
+<tr>
+<td style="text-align:left">df</td>
+<td style="text-align:left">报告文件系统磁盘空间的使用情况。</td>
+</tr>
+<tr>
+<td style="text-align:left">top</td>
+<td style="text-align:left">实时显示系统资源使用情况。</td>
+</tr>
+<tr>
+<td style="text-align:left">free</td>
+<td style="text-align:left">查看系统内存。</td>
+</tr>
+<tr>
+<td style="text-align:left">date</td>
+<td style="text-align:left">显示与设置系统时间。</td>
+</tr>
+<tr>
+<td style="text-align:left">cal</td>
+<td style="text-align:left">查看日历等时间信息。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>搜索文件命令（4 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">which</td>
+<td style="text-align:left">查找二进制命令，按环境变量 PATH 路径查找。</td>
+</tr>
+<tr>
+<td style="text-align:left">find</td>
+<td style="text-align:left">从磁盘遍历查找文件或目录。</td>
+</tr>
+<tr>
+<td style="text-align:left">whereis</td>
+<td style="text-align:left">查找二进制命令，按环境变量 PATH 路径查找。</td>
+</tr>
+<tr>
+<td style="text-align:left">locate</td>
+<td style="text-align:left">从数据库 (/var/lib/mlocate/mlocate.db) 查找命令，使用 updatedb 更新库。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>用户管理命令（10 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">useradd</td>
+<td style="text-align:left">添加用户。</td>
+</tr>
+<tr>
+<td style="text-align:left">usermod</td>
+<td style="text-align:left">修改系统已经存在的用户属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">userdel</td>
+<td style="text-align:left">删除用户。</td>
+</tr>
+<tr>
+<td style="text-align:left">groupadd</td>
+<td style="text-align:left">添加用户组。</td>
+</tr>
+<tr>
+<td style="text-align:left">passwd</td>
+<td style="text-align:left">修改用户密码。</td>
+</tr>
+<tr>
+<td style="text-align:left">chage</td>
+<td style="text-align:left">修改用户密码有效期限。</td>
+</tr>
+<tr>
+<td style="text-align:left">id</td>
+<td style="text-align:left">查看用户的 uid,gid 及归属的用户组。</td>
+</tr>
+<tr>
+<td style="text-align:left">su</td>
+<td style="text-align:left">切换用户身份。</td>
+</tr>
+<tr>
+<td style="text-align:left">visudo</td>
+<td style="text-align:left">编辑 / etc/sudoers 文件的专属命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">sudo</td>
+<td style="text-align:left">以另外一个用户身份（默认 root 用户）执行事先在 sudoers 文件允许的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>基础网络操作命令（11 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">telnet</td>
+<td style="text-align:left">使用 TELNET 协议远程登录。</td>
+</tr>
+<tr>
+<td style="text-align:left">ssh</td>
+<td style="text-align:left">使用 SSH 加密协议远程登录。</td>
+</tr>
+<tr>
+<td style="text-align:left">scp</td>
+<td style="text-align:left">全拼 secure copy，用于不同主机之间复制文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">wget</td>
+<td style="text-align:left">命令行下载文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">ping</td>
+<td style="text-align:left">测试主机之间网络的连通性。</td>
+</tr>
+<tr>
+<td style="text-align:left">route</td>
+<td style="text-align:left">显示和设置 linux 系统的路由表。</td>
+</tr>
+<tr>
+<td style="text-align:left">ifconfig</td>
+<td style="text-align:left">查看、配置、启用或禁用网络接口的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">ifup</td>
+<td style="text-align:left">启动网卡。</td>
+</tr>
+<tr>
+<td style="text-align:left">ifdown</td>
+<td style="text-align:left">关闭网卡。</td>
+</tr>
+<tr>
+<td style="text-align:left">netstat</td>
+<td style="text-align:left">查看网络状态。</td>
+</tr>
+<tr>
+<td style="text-align:left">ss</td>
+<td style="text-align:left">查看网络状态。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>深入网络操作命令（9 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">nmap</td>
+<td style="text-align:left">网络扫描命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">lsof</td>
+<td style="text-align:left">全名 list open files，也就是列举系统中已经被打开的文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">mail</td>
+<td style="text-align:left">发送和接收邮件。</td>
+</tr>
+<tr>
+<td style="text-align:left">mutt</td>
+<td style="text-align:left">邮件管理命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">nslookup</td>
+<td style="text-align:left">交互式查询互联网 DNS 服务器的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">dig</td>
+<td style="text-align:left">查找 DNS 解析过程。</td>
+</tr>
+<tr>
+<td style="text-align:left">host</td>
+<td style="text-align:left">查询 DNS 的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">traceroute</td>
+<td style="text-align:left">追踪数据传输路由状况。</td>
+</tr>
+<tr>
+<td style="text-align:left">tcpdump</td>
+<td style="text-align:left">命令行的抓包工具。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>有关磁盘与文件系统的命令（16 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">mount</td>
+<td style="text-align:left">挂载文件系统。</td>
+</tr>
+<tr>
+<td style="text-align:left">umount</td>
+<td style="text-align:left">卸载文件系统。</td>
+</tr>
+<tr>
+<td style="text-align:left">fsck</td>
+<td style="text-align:left">检查并修复 Linux 文件系统。</td>
+</tr>
+<tr>
+<td style="text-align:left">dd</td>
+<td style="text-align:left">转换或复制文件。</td>
+</tr>
+<tr>
+<td style="text-align:left">dumpe2fs</td>
+<td style="text-align:left">导出 ext2/ext3/ext4 文件系统信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">dump</td>
+<td style="text-align:left">ext2/3/4 文件系统备份工具。</td>
+</tr>
+<tr>
+<td style="text-align:left">fdisk</td>
+<td style="text-align:left">磁盘分区命令，适用于 2TB 以下磁盘分区。</td>
+</tr>
+<tr>
+<td style="text-align:left">parted</td>
+<td style="text-align:left">磁盘分区命令，没有磁盘大小限制，常用于 2TB 以下磁盘分区。</td>
+</tr>
+<tr>
+<td style="text-align:left">mkfs</td>
+<td style="text-align:left">格式化创建 Linux 文件系统。</td>
+</tr>
+<tr>
+<td style="text-align:left">partprobe</td>
+<td style="text-align:left">更新内核的硬盘分区表信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">e2fsck</td>
+<td style="text-align:left">检查 ext2/ext3/ext4 类型文件系统。</td>
+</tr>
+<tr>
+<td style="text-align:left">mkswap</td>
+<td style="text-align:left">创建 Linux 交换分区。</td>
+</tr>
+<tr>
+<td style="text-align:left">swapon</td>
+<td style="text-align:left">启用交换分区。</td>
+</tr>
+<tr>
+<td style="text-align:left">swapoff</td>
+<td style="text-align:left">关闭交换分区。</td>
+</tr>
+<tr>
+<td style="text-align:left">sync</td>
+<td style="text-align:left">将内存缓冲区内的数据写入磁盘。</td>
+</tr>
+<tr>
+<td style="text-align:left">resize2fs</td>
+<td style="text-align:left">调整 ext2/ext3/ext4 文件系统大小。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>系统权限及用户授权相关命令（4 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">chmod</td>
+<td style="text-align:left">改变文件或目录权限。</td>
+</tr>
+<tr>
+<td style="text-align:left">chown</td>
+<td style="text-align:left">改变文件或目录的属主和属组。</td>
+</tr>
+<tr>
+<td style="text-align:left">chgrp</td>
+<td style="text-align:left">更改文件用户组。</td>
+</tr>
+<tr>
+<td style="text-align:left">umask</td>
+<td style="text-align:left">显示或设置权限掩码。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>查看系统用户登陆信息的命令（7 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">whoami</td>
+<td style="text-align:left">显示当前有效的用户名称，相当于执行 id -un 命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">who</td>
+<td style="text-align:left">显示目前登录系统的用户信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">w</td>
+<td style="text-align:left">显示已经登陆系统的用户列表，并显示用户正在执行的指令。</td>
+</tr>
+<tr>
+<td style="text-align:left">last</td>
+<td style="text-align:left">显示登入系统的用户。</td>
+</tr>
+<tr>
+<td style="text-align:left">lastlog</td>
+<td style="text-align:left">显示系统中所有用户最近一次登录信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">users</td>
+<td style="text-align:left">显示当前登录系统的所有用户的用户列表。</td>
+</tr>
+<tr>
+<td style="text-align:left">finger</td>
+<td style="text-align:left">查找并显示用户信息。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>内置命令及其它（19 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">echo</td>
+<td style="text-align:left">打印变量，或直接输出指定的字符串</td>
+</tr>
+<tr>
+<td style="text-align:left">printf</td>
+<td style="text-align:left">将结果格式化输出到标准输出。</td>
+</tr>
+<tr>
+<td style="text-align:left">rpm</td>
+<td style="text-align:left">管理 rpm 包的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">yum</td>
+<td style="text-align:left">自动化简单化地管理 rpm 包的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">watch</td>
+<td style="text-align:left">周期性的执行给定的命令，并将命令的输出以全屏方式显示。</td>
+</tr>
+<tr>
+<td style="text-align:left">alias</td>
+<td style="text-align:left">设置系统别名。</td>
+</tr>
+<tr>
+<td style="text-align:left">unalias</td>
+<td style="text-align:left">取消系统别名。</td>
+</tr>
+<tr>
+<td style="text-align:left">date</td>
+<td style="text-align:left">查看或设置系统时间。</td>
+</tr>
+<tr>
+<td style="text-align:left">clear</td>
+<td style="text-align:left">清除屏幕，简称清屏。</td>
+</tr>
+<tr>
+<td style="text-align:left">history</td>
+<td style="text-align:left">查看命令执行的历史纪录。</td>
+</tr>
+<tr>
+<td style="text-align:left">eject</td>
+<td style="text-align:left">弹出光驱。</td>
+</tr>
+<tr>
+<td style="text-align:left">time</td>
+<td style="text-align:left">计算命令执行时间。</td>
+</tr>
+<tr>
+<td style="text-align:left">nc</td>
+<td style="text-align:left">功能强大的网络工具。</td>
+</tr>
+<tr>
+<td style="text-align:left">xargs</td>
+<td style="text-align:left">将标准输入转换成命令行参数。</td>
+</tr>
+<tr>
+<td style="text-align:left">exec</td>
+<td style="text-align:left">调用并执行指令的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">export</td>
+<td style="text-align:left">设置或者显示环境变量。</td>
+</tr>
+<tr>
+<td style="text-align:left">unset</td>
+<td style="text-align:left">删除变量或函数。</td>
+</tr>
+<tr>
+<td style="text-align:left">type</td>
+<td style="text-align:left">用于判断另外一个命令是否是内置命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">bc</td>
+<td style="text-align:left">命令行科学计算器</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>系统管理与性能监视命令 (9 个)</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">chkconfig</td>
+<td style="text-align:left">管理 Linux 系统开机启动项。</td>
+</tr>
+<tr>
+<td style="text-align:left">vmstat</td>
+<td style="text-align:left">虚拟内存统计。</td>
+</tr>
+<tr>
+<td style="text-align:left">mpstat</td>
+<td style="text-align:left">显示各个可用 CPU 的状态统计。</td>
+</tr>
+<tr>
+<td style="text-align:left">iostat</td>
+<td style="text-align:left">统计系统 IO。</td>
+</tr>
+<tr>
+<td style="text-align:left">sar</td>
+<td style="text-align:left">全面地获取系统的 CPU、运行队列、磁盘 I/O、分页（交换区）、内存、 CPU 中断和网络等性能数据。</td>
+</tr>
+<tr>
+<td style="text-align:left">ipcs</td>
+<td style="text-align:left">用于报告 Linux 中进程间通信设施的状态，显示的信息包括消息列表、共享内存和信号量的信息。</td>
+</tr>
+<tr>
+<td style="text-align:left">ipcrm</td>
+<td style="text-align:left">用来删除一个或更多的消息队列、信号量集或者共享内存标识。</td>
+</tr>
+<tr>
+<td style="text-align:left">strace</td>
+<td style="text-align:left">用于诊断、调试 Linux 用户空间跟踪器。我们用它来监控用户空间进程和内核的交互，比如系统调用、信号传递、进程状态变更等。</td>
+</tr>
+<tr>
+<td style="text-align:left">ltrace</td>
+<td style="text-align:left">命令会跟踪进程的库函数调用, 它会显现出哪个库函数被调用。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>关机 / 重启 / 注销和查看系统信息的命令（6 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">shutdown</td>
+<td style="text-align:left">关机。</td>
+</tr>
+<tr>
+<td style="text-align:left">halt</td>
+<td style="text-align:left">关机。</td>
+</tr>
+<tr>
+<td style="text-align:left">poweroff</td>
+<td style="text-align:left">关闭电源。</td>
+</tr>
+<tr>
+<td style="text-align:left">logout</td>
+<td style="text-align:left">退出当前登录的 Shell。</td>
+</tr>
+<tr>
+<td style="text-align:left">exit</td>
+<td style="text-align:left">退出当前登录的 Shell。</td>
+</tr>
+<tr>
+<td style="text-align:left">Ctrl+d</td>
+<td style="text-align:left">退出当前登录的 Shell 的快捷键。</td>
+</tr>
+<tr>
+<td style="text-align:left"><mark>进程管理相关命令（15 个）</mark></td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">bg</td>
+<td style="text-align:left">将一个在后台暂停的命令，变成继续执行  （在后台执行）。</td>
+</tr>
+<tr>
+<td style="text-align:left">fg</td>
+<td style="text-align:left">将后台中的命令调至前台继续运行。</td>
+</tr>
+<tr>
+<td style="text-align:left">jobs</td>
+<td style="text-align:left">查看当前有多少在后台运行的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">kill</td>
+<td style="text-align:left">终止进程。</td>
+</tr>
+<tr>
+<td style="text-align:left">killall</td>
+<td style="text-align:left">通过进程名终止进程。</td>
+</tr>
+<tr>
+<td style="text-align:left">pkill</td>
+<td style="text-align:left">通过进程名终止进程。</td>
+</tr>
+<tr>
+<td style="text-align:left">crontab</td>
+<td style="text-align:left">定时任务命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">ps</td>
+<td style="text-align:left">显示进程的快照。</td>
+</tr>
+<tr>
+<td style="text-align:left">pstree</td>
+<td style="text-align:left">树形显示进程。</td>
+</tr>
+<tr>
+<td style="text-align:left">nice/renice</td>
+<td style="text-align:left">调整程序运行的优先级。</td>
+</tr>
+<tr>
+<td style="text-align:left">nohup</td>
+<td style="text-align:left">忽略挂起信号运行指定的命令。</td>
+</tr>
+<tr>
+<td style="text-align:left">pgrep</td>
+<td style="text-align:left">查找匹配条件的进程。</td>
+</tr>
+<tr>
+<td style="text-align:left">runlevel</td>
+<td style="text-align:left">查看系统当前运行级别。</td>
+</tr>
+<tr>
+<td style="text-align:left">init</td>
+<td style="text-align:left">切换运行级别。</td>
+</tr>
+<tr>
+<td style="text-align:left">service</td>
+<td style="text-align:left">启动、停止、重新启动和关闭系统服务，还可以显示所有系统服务的当前状态。</td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[JVM]]></title>
+        <id>https://shengwei42.github.io/post/jvm/</id>
+        <link href="https://shengwei42.github.io/post/jvm/">
+        </link>
+        <updated>2025-03-01T05:55:16.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="jvm-的组织架构">JVM 的组织架构</h1>
+<p>JVM 大致可以划分为三个部门：类加载器、运行时数据区和执行引擎。</p>
+<p>① 类加载器</p>
+<p>负责加载 Class 文件，将 Class 文件中的二进制数据读入到内存当中。</p>
+<p>② 运行时数据区</p>
+<p>JVM 在执行 Java 程序时，需要在内存中分配空间来处理各种数据，这些内存区域主要包括方法区、堆、栈、程序计数器和本地方法栈。</p>
+<p>③ 执行引擎</p>
+<p>执行引擎是 JVM 的心脏，负责执行字节码。它包括一个虚拟处理器，还包括即时编译器（JIT Compiler）和垃圾回收器（Garbage Collector）。</p>
+<h1 id="jvm-的内存区域">JVM 的内存区域</h1>
+<p>JVM 的内存区域，有时叫 JVM 的内存结构，有时也叫 JVM 运行时数据区，按照 Java 的虚拟机规范，可以细分为<code>程序计数器</code>、<code>虚拟机栈</code>、<code>本地方法栈</code>、<code>堆</code>、<code>方法区</code>等。</p>
+<p>其中<code>方法区</code>和<code>堆</code>是线程共享的，<code>虚拟机栈</code>、<code>本地方法栈</code>和<code>程序计数器</code>是线程私有的。</p>
+<p><strong>程序计数器：</strong></p>
+<p>程序计数器是一块较小的内存空间，可以看作是当前线程所执行的字节码的行号指示器。字节码解释器工作时通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理、线程恢复等功能都需要依赖这个计数器来完成。</p>
+<p><strong>Java 虚拟机栈：</strong></p>
+<p>Java 虚拟机栈（Java Virtual Machine Stack），通常指的就是“栈”，它的生命周期与线程相同。</p>
+<p>当线程执行一个方法时，会创建一个对应的栈帧，用于存储局部变量表、操作数栈、动态链接、方法出口等信息，然后栈帧会被压入栈中。当方法执行完毕后，栈帧会从栈中移除。</p>
+<p><strong>本地方法栈：</strong></p>
+<p>本地方法栈（Native Method Stacks）与虚拟机栈相似，区别在于虚拟机栈是为 JVM 执行 Java 编写的方法服务的，而本地方法栈是为 Java 调用本地（native）方法服务的，由 C/C++ 编写。</p>
+<p>在本地方法栈中，主要存放了 native 方法的局部变量、动态链接和方法出口等信息。当一个 Java 程序调用一个 native 方法时，JVM 会切换到本地方法栈来执行这个方法。</p>
+<p><strong>堆：</strong></p>
+<p>Java 虚拟机所管理的内存中最大的一块，Java 堆是所有线程共享的一块内存区域，在虚拟机启动时创建。<strong>此内存区域的唯一目的就是存放对象实例，几乎所有的对象实例以及数组都在这里分配内存。</strong></p>
+<p>Java 世界中“几乎”所有的对象都在堆中分配，但是，随着 JIT 编译器的发展与逃逸分析技术逐渐成熟，栈上分配、标量替换优化技术将会导致一些微妙的变化，所有的对象都分配到堆上也渐渐变得不那么“绝对”了。从 JDK 1.7 开始已经默认开启逃逸分析，如果某些方法中的对象引用没有被返回或者未被外面使用（也就是未逃逸出去），那么对象可以直接在栈上分配内存。</p>
+<p><strong>方法区：</strong></p>
+<p>方法区并不真实存在，属于 Java 虚拟机规范中的一个逻辑概念，方法区逻辑上属于堆，用于存储已被 JVM 加载的类信息、常量、静态变量、即时编译器编译后的代码缓存等。<br>
+<strong>方法区的实现：</strong><br>
+<strong>永久代（Permanent Generation）<strong>和</strong>元空间（Metaspace）</strong>：</p>
+<ul>
+<li>在JDK 7及之前的版本中，有永久代（Permanent Generation），用于存储类的元数据（类信息、常量、静态变量等）。</li>
+<li>从JDK 8开始，永久代被移除，取而代之的是元空间（Metaspace）。元空间不再使用堆内存，而是使用本地内存。元空间的大小默认是动态调整的，避免了永久代大小固定可能导致的内存溢出问题。</li>
+</ul>
+<p><strong>运行时常量池：</strong></p>
+<p>属于方法区的一部分。它用于存放编译期生成的各种字面量和符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。</p>
+<p><strong>字符串常量池：</strong></p>
+<p>在Java中，字符串是常用的数据类型，因此专门为它们设计了一个字符串常量池。Java中的字符串常量池驻留在堆内存中。JVM在加载类的时候，如果检测到一个字符串字面量，就会先检查字符串常量池中是否存在这个字符串，如果存在就直接返回它的引用；如果不存在，就会将这个字符串实例化后放入常量池中。</p>
+<h1 id="对象创建的过程">对象创建的过程</h1>
+<p>当我们使用 new 关键字创建一个对象的时候，JVM 首先会检查 new 指令的参数是否能在常量池中定位到一个类的符号引用，然后检查这个符号引用代表的类是否已被加载、解析和初始化过。如果没有，就先执行相应的类加载过程。</p>
+<p>如果已经加载，JVM 会为新生对象分配内存，内存分配完成之后，JVM 将分配到的内存空间初始化为零值（成员变量，数值类型是 0，布尔类型是 false，对象类型是 null），接下来设置对象头，对象头里包含了对象是哪个类的实例、对象的哈希码、对象的 GC 分代年龄等信息。</p>
+<p>最后，JVM 会执行构造方法，将成员变量赋值为预期的值，这样一个对象就创建完成了。</p>
+<h1 id="垃圾回收机制">垃圾回收机制</h1>
+<p>Java的垃圾回收机制（Garbage Collection，简称GC）是Java虚拟机的一项重要功能，它自动管理内存，通过回收不再被引用的对象，释放内存空间，从而避免内存泄漏和提升程序的稳定性。</p>
+<h1 id="垃圾判断算法">垃圾判断算法</h1>
+<ul>
+<li>引用计数算法</li>
+<li>可达性分析算法</li>
+</ul>
+<p><strong>引用计数算法</strong>是通过在对象头中分配一个空间来保存该对象被引用的次数。如果该对象被其它对象引用，则它的引用计数加 1，如果删除对该对象的引用，那么它的引用计数就减 1，当该对象的引用计数为 0 时，那么该对象就会被回收。</p>
+<p>引用计数算法将垃圾回收分摊到整个应用程序的运行当中，而不是集中在垃圾收集时。引用计数算法看似很美好，但实际上它存在一个很大的问题，那就是无法解决循环依赖的问题。</p>
+<p><strong>可达性分析算法</strong>的基本思路是，通过 GC Roots 作为起点，然后向下搜索，搜索走过的路径被称为引用链，当一个对象到 GC Roots 之间没有任何引用相连时，即从 GC Roots 到该对象节点不可达，则证明该对象是需要垃圾收集的。</p>
+<p>通过可达性算法，成功解决了引用计数无法解决的问题-“循环依赖”，只要你无法与 GC Root 建立直接或间接的连接，系统就会判定你为可回收对象。</p>
+<p>所谓的 GC Roots，就是一组必须活跃的引用，不是对象，它们是程序运行时的起点，是一切引用链的源头。在 Java 中，GC Roots 包括以下几种：</p>
+<ul>
+<li>虚拟机栈中的引用（方法的参数、局部变量等）</li>
+<li>本地方法栈中 JNI 的引用</li>
+<li>类静态变量</li>
+<li>运行时常量池中的常量（String 或 Class 类型）</li>
+</ul>
+<h1 id="引用类型">引用类型</h1>
+<ol>
+<li><strong>强引用（Strong Reference）</strong>：
+<ul>
+<li>这是最常见的引用类型，比如<code>Object obj = new Object();</code>中的<code>obj</code>就是一个强引用。</li>
+<li>只要强引用存在，垃圾收集器就不会回收被引用的对象。</li>
+</ul>
+</li>
+<li><strong>软引用（Soft Reference）</strong>：
+<ul>
+<li>通过<code>java.lang.ref.SoftReference</code>类实现。</li>
+<li>当系统内存不足时，垃圾收集器会回收软引用所指向的对象，即使存在强引用到这些对象。</li>
+<li>软引用通常用于实现内存敏感的缓存。</li>
+</ul>
+</li>
+<li><strong>弱引用（Weak Reference）</strong>：
+<ul>
+<li>通过<code>java.lang.ref.WeakReference</code>类实现。</li>
+<li>弱引用所指向的对象在下一次垃圾收集时就会被回收，无论是否存在其他的引用。</li>
+<li>弱引用无法阻止对象的垃圾收集，它们常用于跟踪对象的生命周期，而不延长对象的生命周期。</li>
+</ul>
+</li>
+<li><strong>虚引用（Phantom Reference）</strong>：
+<ul>
+<li>通过<code>java.lang.ref.PhantomReference</code>类实现。</li>
+<li>虚引用几乎不对对象的生命周期产生影响，它们主要用于跟踪对象被垃圾收集器回收的活动。</li>
+</ul>
+</li>
+</ol>
+<h1 id="垃圾回收算法">垃圾回收算法</h1>
+<ul>
+<li>**标记清除算法：**最基础的一种垃圾回收算法，把内存区域中的这些对象进行标记，哪些属于可回收的标记出来（用前面提到的可达性分析法），然后把这些垃圾拎出来清理掉。缺点是标记和清除过程效率较低，并且会产生大量不连续的内存碎片。</li>
+<li>**复制算法：**将内存分为两块，每次只使用其中的一块。当这一块内存用完时，将还存活的对象复制到另一块内存中，然后清空已使用的内存块。优点是效率高、没有碎片问题，但可用内存减半。</li>
+<li>**标记-整理算法：**首先标记所有被引用的对象，然后将存活的对象移动到内存的一端，最后清理掉边界外的内存。结合了标记-清除和复制算法的优点，适用于老年代回收。</li>
+<li>**分代收集算法：**将堆内存分为新生代和老年代，新生代用复制算法，老年代用标记-清除或标记-整理算法。因为大多数对象在新生代被回收，只有少量存活对象进入老年代，这种方式提高了效率。</li>
+</ul>
+<p>在Java中，堆被分为几个区域，以便更高效地进行内存管理和垃圾回收。主要分为以下几个区域：</p>
+<ol>
+<li><strong>新生代（Young Generation）</strong>：
+<ul>
+<li><strong>Eden区</strong>：大多数新对象在Eden区分配。Eden区的对象生命周期通常很短，会很快变为垃圾。</li>
+<li><strong>Survivor区</strong>：分为两个相同大小的区域，称为Survivor 0（或S0）和Survivor 1（或S1）。在进行垃圾回收时，从Eden区和其中一个Survivor区（From区）复制存活的对象到另一个Survivor区（To区），并清空Eden区和From区。每次Minor GC后，两个Survivor区角色交换，即原来的To区变为新的From区。</li>
+</ul>
+</li>
+<li><strong>老年代（Old Generation）</strong>：存放生命周期较长的对象。这些对象通常是从新生代晋升过来的。当对象在新生代经历了多次垃圾回收依然存活时，会被移动到老年代。老年代的垃圾回收频率较低，但回收时间通常较长。</li>
+<li><strong>永久代（PermGen）或元空间（Metaspace）</strong>
+<ul>
+<li><strong>永久代</strong>（PermGen）：在Java 8之前，永久代用于存储类的元数据、常量池、方法信息等。它属于堆的一部分，但在Java 8之后被元空间取代。</li>
+<li><strong>元空间</strong>（Metaspace）：从Java 8开始，元空间替代了永久代。元空间不再使用堆内存，而是使用本地内存来存储类的元数据。它的内存可以动态扩展，避免了永久代中的内存溢出问题。</li>
+</ul>
+</li>
+</ol>
+<h1 id="类加载">类加载</h1>
+<p>Java 类加载机制是Java运行时环境中的一个核心特性，它负责从文件系统加载.class文件到JVM（Java虚拟机）中。Java 类加载过程主要分为以下几个阶段：</p>
+<ol>
+<li>
+<p><strong>加载（Loading）</strong>：</p>
+<ul>
+<li>这个阶段是类加载过程的第一步，虚拟机通过类加载器（ClassLoader）找到类文件，然后读取类文件的二进制数据，并将其转换为方法区的运行时数据结构。</li>
+</ul>
+</li>
+<li>
+<p><strong>验证（Verification）</strong>：</p>
+<ul>
+<li>验证阶段确保加载的类信息符合JVM规范，没有安全问题。例如，确保类的结构正确，没有违反JVM规范的地方。</li>
+</ul>
+</li>
+<li>
+<p><strong>准备（Preparation）</strong>：</p>
+<ul>
+<li>准备阶段是为类变量分配内存并设置初始值的过程。这里的初始值指的是数据类型的零值，比如int类型变量会被初始化为0，引用类型变量会被初始化为null。</li>
+</ul>
+</li>
+<li>
+<p><strong>解析（Resolution）</strong>：</p>
+<ul>
+<li>解析阶段是将类、接口、类成员等的符号引用转换为直接引用的过程。符号引用是类文件中的一个名字，而直接引用是指向内存中的地址。</li>
+</ul>
+</li>
+<li>
+<p><strong>初始化（Initialization）</strong>：</p>
+<ul>
+<li>初始化是类加载过程中最后一个阶段，这个阶段主要是执行一些初始化的操作。</li>
+</ul>
+</li>
+</ol>
+<p>**JVM 启动的时候，并不会一次性加载所有的类，而是根据需要去动态加载。**也就是说，大部分类在具体用到的时候才会去加载，这样对内存更加友好。对于已经加载的类会被放在 <code>ClassLoader</code> 中。在类加载的时候，系统会首先判断当前类是否被加载过。已经被加载的类会直接返回，否则才会尝试加载。也就是说，对于一个类加载器来说，相同二进制名称的类只会被加载一次。</p>
+<h1 id="双亲委派模型">双亲委派模型</h1>
+<p>双亲委派模型是JVM类加载机制中的一项重要设计，它规定了类加载器的工作过程。该模型的核心思想是：一个类加载器在加载类时，首先把请求委派给父类加载器去处理，只有当父类加载器无法完成这个请求时，才由当前类加载器自己去加载。</p>
+<p><strong>工作原理：</strong></p>
+<ol>
+<li><strong>委派加载</strong>：当一个类加载器（如应用程序类加载器）接到加载类的请求时，首先将这个请求委派给它的父加载器去处理。</li>
+<li><strong>递归调用</strong>：父加载器也会遵循同样的委派机制，将请求传递给它的父加载器，直到传递到顶层的启动类加载器（Bootstrap ClassLoader）。</li>
+<li><strong>加载类</strong>：启动类加载器尝试加载类。如果成功，则返回加载的类；如果失败，逐级返回，直到回到原始请求的类加载器。</li>
+<li><strong>自加载</strong>：如果所有父加载器都无法加载该类，原始请求的类加载器才会尝试自己加载该类。</li>
+</ol>
+<p>双亲委派模型保证了 Java 程序的稳定运行，可以避免类的重复加载，也保证了 Java 的核心 API 不被篡改。</p>
+<p>如果没有使用双亲委派模型，而是每个类加载器加载自己的话就会出现一些问题，比如我们编写一个称为 <code>java.lang.Object</code> 类的话，那么程序运行的时候，系统就会出现两个不同的 <code>Object</code> 类。双亲委派模型可以保证加载的是 JRE 里的那个 <code>Object</code> 类，而不是你写的 <code>Object</code> 类。这是因为 <code>AppClassLoader</code> 在加载你的 <code>Object</code> 类时，会委托给 <code>ExtClassLoader</code> 去加载，而 <code>ExtClassLoader</code> 又会委托给 <code>BootstrapClassLoader</code>，<code>BootstrapClassLoader</code> 发现自己已经加载过了 <code>Object</code> 类，会直接返回，不会去加载你写的 <code>Object</code> 类。</p>
+<blockquote>
+<p>JVM 中内置了三个重要的 <code>ClassLoader</code>：</p>
+<ol>
+<li><code>BootstrapClassLoader</code>(启动类加载器)：最顶层的加载类，由 C++实现，通常表示为 null，并且没有父级，主要用来加载 JDK 内部的核心类库（ <code>%JAVA_HOME%/lib</code>目录下的 <code>rt.jar</code>、<code>resources.jar</code>、<code>charsets.jar</code>等 jar 包和类）以及被 <code>-Xbootclasspath</code>参数指定的路径下的所有类。</li>
+<li><code>ExtensionClassLoader</code>(扩展类加载器)：主要负责加载 <code>%JRE_HOME%/lib/ext</code> 目录下的 jar 包和类以及被 <code>java.ext.dirs</code> 系统变量所指定的路径下的所有类。</li>
+<li><code>AppClassLoader</code>(应用程序类加载器)：面向我们用户的加载器，负责加载当前应用 classpath 下的所有 jar 包和类。</li>
+</ol>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Redis]]></title>
+        <id>https://shengwei42.github.io/post/redis/</id>
+        <link href="https://shengwei42.github.io/post/redis/">
+        </link>
+        <updated>2025-02-28T06:04:03.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="什么是-redis">什么是 Redis</h1>
+<p>Redis （<strong>RE</strong>mote <strong>DI</strong>ctionary <strong>S</strong>erver）是一个基于 C 语言开发的开源 NoSQL 数据库。与传统数据库不同的是，Redis 的数据是保存在内存中的（内存数据库，支持持久化），因此读写速度非常快，被广泛应用于分布式缓存方向。并且，Redis 存储的是 KV 键值对数据。</p>
+<p>为了满足不同的业务场景，Redis 内置了多种数据类型实现。并且，Redis 还支持事务、持久化、Lua 脚本、发布订阅模型、多种开箱即用的集群方案。</p>
+<h1 id="redis-为什么这么快">Redis 为什么这么快</h1>
+<p>Redis 之所以能够如此快速高效地处理数据，主要有以下几个原因：</p>
+<ol>
+<li>
+<p>基于内存存储<br>
+Redis 将数据存储在内存中，避免了磁盘 I/O 的性能开销。内存的读写速度远远高于磁盘，这是 Redis 能够快速响应的根本原因。</p>
+</li>
+<li>
+<p>高效的数据结构<br>
+Redis 为不同的数据类型设计了专门的数据结构，如 String、List、Hash、Set、Sorted Set 等。这些数据结构经过精心设计，可以高效地支持各种操作。</p>
+</li>
+<li>
+<p>单线程模型<br>
+Redis 采用单线程模型运行，避免了多线程环境下的上下文切换和锁竞争开销。单线程意味着 Redis 同一时刻只会执行一个命令，不会出现并发问题。虽然单线程理论上存在性能瓶颈，但在实际应用中 CPU 通常不是 Redis 的瓶颈所在。</p>
+</li>
+<li>
+<p>多路 I/O 复用<br>
+Redis 利用 epoll 等 I/O 多路复用技术，可以同时监听多个 Socket 连接。当有事件到达时，采用事件处理器进行非阻塞处理。这种高效的 I/O 模型可以处理大量并发连接。</p>
+</li>
+</ol>
+<h1 id="redis优点">Redis优点</h1>
+<p><strong>1、访问速度更快</strong></p>
+<p>传统数据库数据保存在磁盘，而 Redis 基于内存，内存的访问速度比磁盘快很多。引入 Redis 之后，我们可以把一些高频访问的数据放到 Redis 中，这样下次就可以直接从内存中读取，速度可以提升几十倍甚至上百倍。</p>
+<p><strong>2、高并发</strong></p>
+<p>一般像 MySQL 这类的数据库的 QPS 大概都在 4k 左右（4 核 8g） ，但是使用 Redis 缓存之后很容易达到 5w+，甚至能达到 10w+（就单机 Redis 的情况，Redis 集群的话会更高）。</p>
+<blockquote>
+<p>QPS（Query Per Second）：服务器每秒可以执行的查询次数；</p>
+</blockquote>
+<p>由此可见，直接操作缓存能够承受的数据库请求数量是远远大于直接访问数据库的，所以我们可以考虑把数据库中的部分数据转移到缓存中去，这样用户的一部分请求会直接到缓存这里而不用经过数据库。进而，我们也就提高了系统整体的并发。</p>
+<p><strong>3、功能全面</strong></p>
+<p>Redis 除了可以用作缓存之外，还可以用于分布式锁、限流、消息队列、延时队列等场景，功能强大！</p>
+<h1 id="redis-常用命令">Redis 常用命令</h1>
+<ol>
+<li>
+<p>通用命令</p>
+<ul>
+<li><code>keys *</code>: 查看当前数据库中所有的键</li>
+<li><code>exists key</code>: 检查指定的键是否存在</li>
+<li><code>del key [key ...]</code>: 删除一个或多个键</li>
+<li><code>expire key seconds</code>: 为键设置过期时间</li>
+<li><code>ttl key</code>: 查看键的剩余过期时间</li>
+<li><code>type key</code>: 查看键的数据类型</li>
+</ul>
+</li>
+<li>
+<p>操作字符串的命令有：</p>
+<ul>
+<li><code>SET key value</code>：设置键 key 的值为 value。</li>
+<li><code>GET key</code>：获取键 key 的值。</li>
+<li><code>DEL key</code>：删除键 key。</li>
+<li><code>INCR key</code>：将键 key 存储的数值增一。</li>
+<li><code>DECR key</code>：将键 key 存储的数值减一。</li>
+</ul>
+</li>
+<li>
+<p>操作列表的命令有：</p>
+<ul>
+<li><code>LPUSH key value</code>：将一个值插入到列表 key 的头部。</li>
+<li><code>RPUSH key value</code>：将一个值插入到列表 key 的尾部。</li>
+<li><code>LPOP key</code>：移除并返回列表 key 的头元素。</li>
+<li><code>RPOP key</code>：移除并返回列表 key 的尾元素。</li>
+<li><code>LRANGE key start end</code>：获取列表 key 中指定范围内的元素。</li>
+</ul>
+</li>
+<li>
+<p>操作集合的命令有：</p>
+<ul>
+<li><code>SADD key member</code>：向集合 key 添加一个元素。</li>
+<li><code>SREM key member</code>：从集合 key 中移除一个元素。</li>
+<li><code>SMEMBERS key</code>：返回集合 key 中的所有元素。</li>
+</ul>
+</li>
+<li>
+<p>操作有序集合的命令有：</p>
+<ul>
+<li><code>ZADD key score member</code>：向有序集合 key 添加一个成员，或更新其分数。</li>
+<li><code>ZRANGE key start end [WITHSCORES]</code>：按照索引区间返回有序集合 key 中的成员，可选 WITHSCORES 参数返回分数。</li>
+<li><code>ZREVRANGE key start end [WITHSCORES]</code>：返回有序集合 key 中，指定区间内的成员，按分数递减。</li>
+<li><code>ZREM key member</code>：移除有序集合 key 中的一个或多个成员。</li>
+</ul>
+</li>
+<li>
+<p>操作哈希的命令有：</p>
+<ul>
+<li><code>HSET key field value</code>：向键为 key 的哈希表中设置字段 field 的值为 value。</li>
+<li><code>HGET key field</code>：获取键为 key 的哈希表中字段 field 的值。</li>
+<li><code>HGETALL key</code>：获取键为 key 的哈希表中所有的字段和值。</li>
+<li><code>HDEL key field</code>：删除键为 key 的哈希表中的一个或多个字段。</li>
+</ul>
+</li>
+</ol>
+<h1 id="布隆过滤器">布隆过滤器</h1>
+<p>布隆过滤器是一种空间效率极高的概率型数据结构，用于快速检查一个元素是否存在于一个集合中。</p>
+<p>布隆过滤器由一个长度为 m 的位数组和 k 个哈希函数组成。</p>
+<ul>
+<li>开始时，布隆过滤器的每个位都被设置为 0。</li>
+<li>当一个元素被添加到过滤器中时，它会被 k 个哈希函数分别计算得到 k 个位置，然后将位数组中对应的位设置为 1。</li>
+<li>当检查一个元素是否存在于过滤器中时，同样使用 k 个哈希函数计算位置，如果任一位置的位为 0，则该元素肯定不在过滤器中；如果所有位置的位都为 1，则该元素可能在过滤器中。</li>
+</ul>
+<p>因为布隆过滤器占用的内存空间非常小，所以查询效率也非常高，所以在 Redis 缓存中，使用布隆过滤器可以快速判断请求的数据是否在缓存中。但是布隆过滤器也有一定的缺点，由于哈希冲突的存在，布隆过滤器可能会出现“假阳性”，即错误地报告某个元素存在，但不会出现“假阴性”，即如果报告某个元素不存在，它一定不在集合中。</p>
+<h1 id="redis-是单线程吗">Redis 是单线程吗？</h1>
+<p>Redis 单线程指的是 <strong>接收客户端请求-&gt;解析请求 -&gt;进行数据读写等操作-&gt;发送数据给客户端</strong> 这个过程是由一个线程（主线程）来完成的，这也是我们常说 Redis 是单线程的原因。但是，Redis 程序并不是单线程的，Redis 在启动的时候，是会启动后台线程。比如关闭文件、AOF 刷盘、释放内存。</p>
+<h1 id="redis-60-之后为什么引入了多线程">Redis 6.0 之后为什么引入了多线程？</h1>
+<p>虽然 Redis 的主要工作（网络 I/O 和执行命令）一直是单线程模型，但是在 Redis 6.0 版本之后，也采用了多个 I/O 线程来处理网络请求，这是因为随着网络硬件的性能提升，Redis 的性能瓶颈有时会出现在网络 I/O 的处理上。所以为了提高网络 I/O 的并行度，Redis 6.0 对于网络 I/O 采用多线程来处理。但是对于命令的执行，Redis 仍然使用单线程来处理。命令单线程执行确保了数据操作的原子性和一致性。</p>
+<h1 id="redis-持久化">Redis 持久化</h1>
+<ol>
+<li>
+<p>RDB持久化</p>
+<ul>
+<li>RDB（Redis DataBase）持久化是一种基于快照的持久化方式。在指定的时间间隔内，如果满足一定条件（如某段时间内发生的写操作次数），Redis会生成一个包含当前内存数据的RDB文件。这个RDB文件可以用于数据恢复或备份。RDB持久化提供了较高的数据压缩率和快速的数据加载速度，但可能存在一定程度的数据丢失。</li>
+<li>触发方式：
+<ul>
+<li>手动触发：使用**<code>SAVE</code><strong>或</strong><code>BGSAVE</code><strong>命令。</strong><code>SAVE</code><strong>是同步命令，执行过程中会阻塞其他请求。</strong><code>BGSAVE</code>**是异步命令，主进程会forks一个子进程，进行异步持久化，持久化过程中主进程仍然可以处理其他请求。</li>
+<li>自动触发：在配置文件中设置触发条件，redis.conf配置如下：<code>save 300 10</code>，300s内至少有1次写操作。</li>
+<li>关闭Redis时触发：Redis在关闭服务时会自动触发一次RDB持久化。</li>
+<li>主从同步时触发：当从节点连接到主节点时，主节点会触发一次RDB持久化，并将生成的RDB文件发送给从节点进行同步。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>AOF持久化</p>
+<ul>
+<li>AOF（Append Only File）持久化是一种基于日志的持久化方式。Redis将所有的写操作命令记录到一个AOF文件中。当Redis重新启动时，可以通过重放AOF文件中的命令来恢复数据。AOF持久化提供了更高的数据安全性，可以保证数据的完整性。然而，与RDB持久化相比，AOF文件通常较大，数据加载速度较慢。</li>
+<li>触发方式：
+<ul>
+<li>启用AOF持久化：在配置文件中设置<code>appendonly yes</code>。</li>
+<li>还可以配置AOF文件的写入策略。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>混合持久化（RDB + AOF）<br>
+混合持久化结合了RDB持久化和AOF持久化的优点，可以在保证数据安全性的同时，提供较快的数据加载速度。在这种持久化方式下，Redis会同时生成RDB文件和AOF文件。当Redis重新启动时，优先使用AOF文件恢复数据，以确保数据的完整性。混合持久化适用于对数据安全性和性能要求较高的场景。</p>
+</li>
+</ol>
+<h1 id="rdb-和-aof-优缺点">RDB 和 AOF 优缺点</h1>
+<p><strong>RDB持久化具有以下优点：</strong></p>
+<ol>
+<li>高性能：由于采用子进程进行磁盘操作，主进程无需进行磁盘IO，保证了Redis的高性能。</li>
+<li>快速恢复：RDB文件包含了某一时刻的完整数据快照，可以快速恢复数据。</li>
+<li>更小的存储空间：RDB文件经过压缩，占用较小的磁盘空间。</li>
+</ol>
+<p><strong>RDB持久化的缺点包括：</strong></p>
+<ol>
+<li>数据丢失：由于RDB持久化是基于时间间隔的，可能存在一定程度的数据丢失。</li>
+<li>子进程占用内存：在生成RDB文件过程中，子进程会占用和主进程相同的内存空间，可能导致内存不足的问题。</li>
+</ol>
+<p><strong>AOF持久化具有以下优点：</strong></p>
+<ol>
+<li>更高的数据安全性：根据同步策略的选择，AOF持久化可以保证较高的数据安全性。</li>
+<li>更好的容错性：即使AOF文件存在部分损坏，仍可以恢复大部分数据。</li>
+</ol>
+<p><strong>AOF持久化的缺点包括：</strong></p>
+<ol>
+<li>较大的存储空间：与RDB持久化相比，AOF文件通常较大，占用较多磁盘空间。</li>
+<li>数据加载速度较慢：由于需要重放AOF文件中的命令，数据恢复速度相对较慢。</li>
+</ol>
+<h1 id="rdb-和-aof-如何选择">RDB 和 AOF 如何选择</h1>
+<p>如果对数据的安全性要求较高，不能接受数据丢失，建议使用AOF或者混合持久化。<br>
+如果更注重系统的高性能要求或者磁盘空间有限，数据不太敏感，可以选择RDB。<br>
+在大多数场景下，一般是使用混合持久化方式，它结合了二者的优点，更适合复杂的应用场景。</p>
+<h1 id="redis-高可用">Redis 高可用</h1>
+<ol>
+<li>
+<p>主从复制</p>
+<ul>
+<li>一个 Redis 实例作为主节点（Master），负责处理所有的写操作。</li>
+<li>一个或多个 Redis 实例作为从节点（Slave），复制主节点的数据。</li>
+<li>从节点可以用于读取操作，实现读写分离，提高系统性能。</li>
+<li>当主节点发生故障时，可以手动或自动切换到从节点，提供服务。</li>
+</ul>
+</li>
+<li>
+<p>哨兵模式</p>
+<ul>
+<li>在主从复制的基础上，引入了哨兵节点。</li>
+<li>哨兵节点用于监控主从节点的状态，自动执行故障转移。</li>
+<li>当主节点发生故障时，哨兵节点会自动将一个从节点升级为新的主节点。</li>
+<li>哨兵模式实现了自动故障转移，提高了系统的可用性。</li>
+</ul>
+</li>
+<li>
+<p>分片集群模式</p>
+<ul>
+<li>Redis 集群支持多主多从，每个主节点都有一个或多个从节点。</li>
+<li>集群将数据分为16384个槽位，每个节点负责管理一部分槽位。当客户端向集群发送请求时，集群会根据键的哈希值将请求路由到相应的节点。</li>
+<li>客户端直接与存储数据的主节点交互，一定程度上实现了实现负载均衡。</li>
+<li>当某个节点发生故障时，集群会自动进行故障转移，保证服务可用性。</li>
+<li>集群模式支持线性扩展，可以通过添加节点来提高容量和吞吐量。</li>
+</ul>
+</li>
+</ol>
+<p>通过主从复制、哨兵模式和集群模式，Redis 可以在主节点故障或其他异常情况下保持高可用性，确保数据的可靠性和可用性。不同的模式适用于不同的应用场景，可以根据具体需求进行选择。</p>
+<h1 id="主从复制">主从复制</h1>
+<p>主从复制是指将一台 Redis 服务器的数据，复制到其他的 Redis 服务器。前者称为主节点，后者称为从节点。且数据的复制是单向的，只能由主节点到从节点。</p>
+<p><strong>主从复制主要的作用是什么？</strong></p>
+<p>① <strong>数据冗余：</strong> 主从复制实现了数据的热备份，是持久化之外的一种数据冗余方式。</p>
+<p>② <strong>故障恢复：</strong> 如果主节点挂掉了，可以将一个从节点提升为主节点，从而实现故障的快速恢复。通常会使用哨兵来实现自动故障转移，当主节点挂掉时，哨兵会自动将一个从节点升级为主节点，保证系统的可用性。假如是从节点挂掉了，主节点不受影响，但应该尽快修复并重启挂掉的从节点，使其重新加入集群并从主节点同步数据。</p>
+<p>③ <strong>负载均衡：</strong> 在主从复制的基础上，配合读写分离，可以由主节点提供写服务，由从节点提供读服务，分担服务器负载。尤其是在写少读多的场景下，通过多个从节点分担读负载，可以大大提高 Redis 服务器的并发量。</p>
+<p>④ <strong>高可用基础：</strong> 除了上述作用以外，主从复制还是哨兵和集群能够实施的基础，因此说主从复制是 Redis 高可用的基础。</p>
+<h1 id="缓存读写策略有">缓存读写策略有</h1>
+<p>常见的缓存读写策略主要有以下几种，每种策略适用于不同的场景和需求：</p>
+<ol>
+<li>
+<p>旁路缓存模式（Cache Aside Pattern）：在旁路缓存模式中，应用程序直接与缓存和数据库交互。数据首先从缓存中读取，如果缓存未命中，则从数据库中加载数据，并将数据存入缓存。</p>
+<ul>
+<li>读操作：从缓存中读取数据。如果缓存命中，直接返回数据。如果缓存未命中，从数据库中查询数据，并将其写入缓存。</li>
+<li>写操作：更新数据库中的记录。删除缓存中的相关数据。</li>
+<li>优点：适合读请求较多的场景。可以有效减少数据库的负载。</li>
+<li>缺点：可能导致缓存和数据库之间的数据不一致。</li>
+</ul>
+</li>
+<li>
+<p>读写穿透策略（Read/Write Through Pattern）：在读写穿透策略中，所有的读写操作都通过缓存进行。应用程序只与缓存交互，缓存负责与数据库的通信。</p>
+<ul>
+<li>读操作：查询缓存，如果存在则返回；如果不存在，则从数据库中加载数据并写入缓存。</li>
+<li>写操作：更新缓存中的数据，并同步更新到数据库。</li>
+<li>优点：简化了应用程序的逻辑，所有操作都通过缓存进行。数据一致性较高，因为写操作直接更新了缓存和数据库。</li>
+<li>缺点：如果缓存故障，可能会影响系统的可用性。</li>
+</ul>
+</li>
+<li>
+<p>异步缓存写入策略（Write Behind / Write Back Pattern）：在异步缓存写入策略中，数据首先写入缓存，然后异步地将数据写入数据库。这种方式可以提高写操作的性能。</p>
+<ul>
+<li>读操作：从缓存中读取数据。</li>
+<li>写操作：将数据写入缓存，并异步将数据写入数据库。</li>
+<li>优点：提高了写入性能，减少了对数据库的直接写入压力。适合写操作频繁的场景。</li>
+<li>缺点：数据一致性风险较高，可能导致数据丢失或延迟写入。</li>
+</ul>
+</li>
+<li>
+<p>总结：选择合适的缓存读写策略应根据具体的业务需求和场景来决定：</p>
+<ul>
+<li>旁路缓存模式适合读多写少的场景，可以有效降低数据库负载。</li>
+<li>读写穿透策略适合需要高一致性的场景，简化了应用逻辑。</li>
+<li>异步缓存写入策略适合写操作频繁的场景，但需要注意数据一致性问题。</li>
+</ul>
+</li>
+</ol>
+<p>拓展：</p>
+<ol>
+<li>在写数据的过程中，可以先删除缓存，后更新数据库吗？<br>
+不行！因为这样可能会造成 数据库和缓存数据不一致的问题。<br>
+举例：请求 1 先写数据 A，请求 2 随后读数据 A 的话，就很有可能产生数据不一致性的问题。</li>
+<li>在写数据的过程中，先更新数据库，后删除缓存就没有问题了吗？<br>
+理论上来说还是可能会出现数据不一致性的问题，不过概率非常小，因为缓存的写入速度是比数据库的写入速度快很多。<br>
+举例：请求 1 先读数据 A，请求 2 随后写数据 A，并且数据 A 在请求 1 请求之前不在缓存中的话，也有可能产生数据不一致性的问题。</li>
+</ol>
+<h1 id="redis-使用的过期删除策略">Redis 使用的过期删除策略</h1>
+<p><strong>访问流程：<strong>每当我们对一个 key 设置了过期时间时，Redis 会把该 key 带上过期时间存储到一个</strong>过期字典</strong>中，也就是说过期字典中保存了数据库中所有 key 的过期时间。当我们查询一个 key 时，Redis 首先检查该 key 是否存在于过期字典中：</p>
+<ul>
+<li>如果不在，则正常读取键值；</li>
+<li>如果存在，则会获取该 key 的过期时间，然后与当前系统时间进行比对，如果比系统时间大，那就没有过期，否则判定该 key 已过期。</li>
+</ul>
+<p>Redis 的默认配置是同时使用惰性删除和定期删除两种策略。</p>
+<ol>
+<li>惰性删除策略：惰性删除策略的做法是，不主动删除过期键，每次从数据库访问 key 时，都检测 key 是否过期，如果过期则删除该 key。
+<ul>
+<li>优点：惰性删除能够节省 CPU 资源，因为只有在访问键时才会检查其过期状态。</li>
+<li>缺点：如果一个 key 已经过期，而这个 key 又仍然保留在数据库中，那么只要这个过期 key 一直没有被访问，它所占用的内存就不会释放，造成了一定的内存空间浪费。</li>
+</ul>
+</li>
+<li>定期删除策略：每隔一段时间随机从数据库中取出一定数量的 key 进行检查，并删除其中的过期key。
+<ul>
+<li>
+<p>流程：</p>
+<ul>
+<li>从过期字典中随机抽取 20 个 key；</li>
+<li>检查这 20 个 key 是否过期，并删除已过期的 key；</li>
+<li>如果本轮检查的已过期 key 的数量，超过 5 个（20/4），也就是「已过期 key 的数量」占比「随机抽取 key 的数量」大于 25%，则继续重复之前的步骤 ；如果已过期的 key 比例小于 25%，则停止继续删除过期 key，然后等待下一轮再检查。</li>
+</ul>
+</li>
+<li>
+<p>优点：定期删除可以在一定程度上清理那些未被访问的过期键，避免内存中堆积大量的无用数据。</p>
+</li>
+<li>
+<p>缺点：难以确定删除操作执行的时长和频率。如果执行的太频繁，就会对 CPU 不友好；如果执行的太少，那又和惰性删除一样了，过期 key 占用的内存不会及时得到释放。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h1 id="redis-内存淘汰策略">Redis 内存淘汰策略</h1>
+<p>Redis 内存淘汰策略共有八种，这八种策略大体分为「不进行数据淘汰」和「进行数据淘汰」两类策略。</p>
+<p><em><strong>1、不进行数据淘汰的策略</strong></em></p>
+<p><strong>noeviction</strong>（Redis3.0之后，默认的内存淘汰策略） ：它表示当运行内存超过最大设置内存时，不淘汰任何数据，而是不再提供服务，直接返回错误。</p>
+<p><em><strong>2、进行数据淘汰的策略</strong></em></p>
+<p>针对「进行数据淘汰」这一类策略，又可以细分为「在设置了过期时间的数据中进行淘汰」和「在所有数据范围内进行淘汰」这两类策略。 在设置了过期时间的数据中进行淘汰：</p>
+<ul>
+<li><strong>volatile-random</strong>：随机淘汰设置了过期时间的任意键值；</li>
+<li><strong>volatile-ttl</strong>：优先淘汰更早过期的键值。</li>
+<li><strong>volatile-lru</strong>（Redis3.0 之前，默认的内存淘汰策略）：淘汰所有设置了过期时间的键值中，最久未使用的键值；</li>
+<li><strong>volatile-lfu</strong>：淘汰所有设置了过期时间的键值中，最少使用的键值；</li>
+</ul>
+<p>在所有数据范围内进行淘汰：</p>
+<ul>
+<li><strong>allkeys-random</strong>：随机淘汰任意键值;</li>
+<li><strong>allkeys-lru</strong>：淘汰整个键值中最久未使用的键值；</li>
+<li><strong>allkeys-lfu</strong>：淘汰整个键值中最少使用的键值。</li>
+</ul>
+<h1 id="如何避免缓存雪崩-缓存击穿-缓存穿透">如何避免缓存雪崩、缓存击穿、缓存穿透？</h1>
+<ol>
+<li>
+<p>缓存雪崩：当大量缓存数据在同一时间过期时，如果此时有大量的用户请求，都无法在 Redis 中处理，于是全部请求都直接访问数据库，从而导致数据库的压力骤增，严重的会造成数据库宕机，造成整个系统崩溃。<br>
+解决方案：</p>
+<ul>
+<li>
+<p><strong>设置随机过期时间</strong>：为缓存数据设置不同的过期时间，避免在同一时刻大量缓存失效。</p>
+</li>
+<li>
+<p><strong>使用高可用的缓存架构</strong>：部署Redis主从集群和哨兵机制，确保即使某个缓存节点宕机，系统仍能正常运作。</p>
+</li>
+<li>
+<p><strong>请求限流和服务降级</strong>：在高并发情况下，限制请求速率，避免数据库被瞬时大量请求压垮。</p>
+</li>
+</ul>
+</li>
+<li>
+<p>缓存击穿：缓存击穿发生在热点数据的缓存失效时，多个请求同时访问该数据，导致直接查询数据库，可能使数据库负载过重。<br>
+解决方案：</p>
+<ul>
+<li>**互斥锁方案：**Redis 中使用 setNX 方法设置一个状态位，表示这是一种锁定状态，保证同一时间只有一个业务线程请求缓存，未能获取互斥锁的请求，要么等待锁释放后重新读取缓存，要么就返回空值或者默认值。</li>
+<li><strong>不设置过期时间</strong>：对于热点数据，可以选择不设置过期时间，确保数据一直在缓存中。</li>
+<li><strong>预热缓存</strong>：在系统上线前，提前将热点数据加载到缓存中，避免首次访问时的压力</li>
+</ul>
+</li>
+<li>
+<p>缓存穿透：当用户访问的数据，既不在缓存中，也不在数据库中，导致请求在访问缓存时，发现缓存缺失，再去访问数据库时，发现数据库中也没有要访问的数据，没办法构建缓存数据来服务后续的请求。那么当有大量这样的请求到来时，数据库的压力骤增，这就是缓存穿透的问题。</p>
+<ul>
+<li>缓存穿透的发生一般有这两种情况：<br>
+业务误操作，缓存中的数据和数据库中的数据都被误删除了，所以导致缓存和数据库中都没有数据；<br>
+黑客恶意攻击，故意大量访问某些读取不存在数据的业务；</li>
+<li>解决方案：
+<ul>
+<li><strong>参数校验</strong>：对请求参数进行严格的校验，非法请求直接返回错误，避免无效请求对数据库的压力。</li>
+<li><strong>缓存空值</strong>：对于查询不到的数据，可以在缓存中存储一个空值，防止相同的无效请求多次查询数据库。</li>
+<li><strong>使用布隆过滤器</strong>：在请求到达数据库前，先通过布隆过滤器判断数据是否存在，避免不必要的数据库查询</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h1 id="大-key-问题">大 key 问题</h1>
+<p>在Redis中，大key问题指的是某个键对应的数据结构（如字符串、列表、集合、哈希表等）过大，导致内存消耗过多、操作性能下降或出现阻塞的情况。</p>
+<ol>
+<li>
+<p>如何找到大 key？</p>
+<ul>
+<li>使用<code>--bigkeys</code>参数：<code>redis-cli --bigkeys</code> 是一个Redis客户端命令，它可以帮助你扫描整个Redis数据库，找出其中的“大key”。它会分析所有类型的key（如字符串、列表、集合、有序集合和哈希表），并报告每种类型的最大key及其大小。</li>
+<li>使用<code>redis-rdb-tools</code>工具：<code>redis-rdb-tools</code> 是一种用于分析 Redis RDB 文件的工具，它可以帮助你发现大key。通过解析 Redis 的 RDB 文件，<code>redis-rdb-tools</code> 能够提供详细的统计信息，包括找到大key。</li>
+</ul>
+</li>
+<li>
+<p>如何处理大 key？</p>
+<ul>
+<li>
+<p>删除大 key：</p>
+<ul>
+<li>异步删除：使用<code>UNLINK</code>命令而不是<code>DEL</code>命令。<code>UNLINK</code>是非阻塞的，会在后台删除key，从而避免阻塞Redis的主线程。</li>
+<li>分批删除：对于大集合、大列表等数据结构，可以使用<code>SCAN</code>命令结合<code>SPOP</code>、<code>LPOP</code>等逐步删除内容，避免一次性删除导致阻塞。</li>
+</ul>
+</li>
+<li>
+<p>压缩和拆分 key</p>
+<ul>
+<li>当 vaule 是 string 时，比较难拆分，则使用序列化、压缩算法将 key 的大小控制在合理范围内，但是序列化和反序列化都会带来额外的性能消耗。压缩之后仍然是大 key 时，则需要进行拆分，将一个大 key 分为不同的部分，记录每个部分的 key，使用 multiget 等操作实现事务读取。</li>
+<li>当 value 是 list/set 等集合类型时，根据预估的数据规模来进行分片，不同的元素计算后分到不同的片。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h1 id="热-key问题">热 key问题</h1>
+<p>Redis中的“热key”问题指的是某个或某些key被频繁访问，导致这些key消耗了大量的资源（如CPU、网络带宽等），从而可能导致Redis服务器的性能瓶颈，甚至影响整个系统的稳定性。</p>
+<p>检测热key：</p>
+<ul>
+<li>
+<p><strong>监控命令统计</strong>：</p>
+<ul>
+<li>使用 <code>INFO</code> 命令监控Redis的命令统计，分析哪些命令被频繁执行，以及哪些key被频繁访问。</li>
+</ul>
+<p><strong>慢日志（Slow Log）</strong>：</p>
+<ul>
+<li>通过慢日志可以捕捉那些执行时间较长的命令，分析是否有key被频繁且耗时地操作。</li>
+</ul>
+<p><strong>监控请求量</strong>：</p>
+<ul>
+<li>通过 Redis 的 <code>MONITOR</code> 命令（适合在开发环境中使用）可以实时监控Redis服务器上所有的请求，分析哪些key被频繁访问。</li>
+</ul>
+</li>
+</ul>
+<p>处理热 key：</p>
+<ul>
+<li>
+<p><strong>缓存层级化</strong>：</p>
+<ul>
+<li>对于特别热的key，考虑在应用层加入一层本地缓存，避免所有请求都直接打到Redis。</li>
+<li>对于多级缓存架构，可以将热点数据分散到多个缓存实例中，减轻单个实例的负载。</li>
+</ul>
+<p><strong>数据分片（Sharding）</strong>：</p>
+<ul>
+<li>将热key的值进行拆分，通过分片策略将其分散到多个key中，以减少单个key的访问压力。</li>
+</ul>
+</li>
+</ul>
+<h1 id="为什么不建议使用redis-事务">为什么不建议使用Redis 事务</h1>
+<p>Redis的事务提供了一种将多个命令打包成一个原子操作的机制。然而，Redis事务并不具备传统数据库事务的所有特性，存在一些局限性和缺点，这使得在某些场景下不建议使用Redis事务。</p>
+<ul>
+<li>缺乏回滚机制：在Redis事务中，一旦事务中的某个命令执行失败，Redis并不会回滚之前已经成功执行的命令。所有命令都会继续执行，很可能会导致不一致状态。</li>
+<li>乐观锁机制的局限：Redis事务是基于乐观锁的。如果这些键在事务执行前被其他客户端修改，事务将被中止，导致需要频繁重试，增加了实现的复杂度和不确定性。</li>
+<li>事务中的命令执行并非完全原子：Redis事务的执行是串行的，即使在一个事务中发起多个命令，这些命令也会按顺序执行。如果事务中的某条命令失败，这条命令的错误不会阻止剩余命令的执行，导致数据可能进入一个不一致的状态。</li>
+<li>替代方案更优：Redis的Lua脚本可以提供原子性和更复杂的操作逻辑。由于整个Lua脚本是在Redis中作为一个原子操作执行的，它比事务更安全和可靠。</li>
+</ul>
+]]></content>
+    </entry>
+</feed>
